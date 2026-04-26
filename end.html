@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>You Are Made of Stars</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#000; overflow:hidden; font-family:'Cormorant Garamond',serif; cursor:default; }
+#c { position:fixed; inset:0; z-index:0; }
+
+/* Planet SVG -- starts large and centered, zooms to smaller */
+#planet-container {
+  position:fixed; left:50%; top:50%;
+  transform:translate(-50%,-50%) scale(2.5);
+  z-index:10; pointer-events:none;
+  transition:transform 2s cubic-bezier(0.25,0.46,0.45,0.94),
+             top 2s cubic-bezier(0.25,0.46,0.45,0.94);
+  opacity:0;
+}
+#planet-container.revealed {
+  opacity:1;
+}
+#planet-container.settled {
+  transform:translate(-50%,-50%) scale(1);
+  top:38%;
+}
+
+#planet-svg { display:block; }
+
+/* Text reveals below planet */
+#text-panel {
+  position:fixed; left:50%; bottom:0;
+  transform:translateX(-50%);
+  width:min(640px,88vw);
+  text-align:center;
+  padding-bottom:52px;
+  z-index:10;
+}
+
+#planet-name {
+  font-family:'Cinzel',serif;
+  font-size:clamp(42px,6vw,80px); font-weight:400;
+  color:rgba(255,255,255,0.92); letter-spacing:0.08em;
+  opacity:0; transform:translateY(16px);
+  transition:opacity 1.2s ease, transform 1.2s ease;
+  margin-bottom:8px;
+}
+#planet-name.show { opacity:1; transform:translateY(0); }
+
+#planet-type {
+  font-family:'Cormorant Garamond',serif; font-style:italic;
+  font-size:15px; color:rgba(255,255,255,0.32); letter-spacing:0.12em;
+  opacity:0; transition:opacity 1s ease 0.3s;
+  margin-bottom:28px;
+}
+#planet-type.show { opacity:1; }
+
+#divider {
+  width:40px; height:1px; background:rgba(255,255,255,0.15);
+  margin:0 auto 24px; opacity:0; transition:opacity 0.8s ease 0.5s;
+}
+#divider.show { opacity:1; }
+
+#science-text {
+  font-size:14px; line-height:1.95; color:rgba(255,255,255,0.6);
+  letter-spacing:0.02em; margin-bottom:16px;
+  opacity:0; transition:opacity 1.2s ease 0.6s;
+}
+#science-text.show { opacity:1; }
+
+#narration-text {
+  font-style:italic; font-size:13px; line-height:1.85;
+  color:rgba(255,255,255,0.3); letter-spacing:0.02em; margin-bottom:36px;
+  opacity:0; transition:opacity 1s ease 0.9s;
+}
+#narration-text.show { opacity:1; }
+
+#try-again {
+  background:none; border:0.5px solid rgba(255,255,255,0.2);
+  border-radius:2px; color:rgba(255,255,255,0.38);
+  font-family:'Cinzel',serif; font-size:10px; letter-spacing:0.28em;
+  padding:11px 36px; cursor:pointer; transition:all 0.35s;
+  opacity:0; transition:opacity 0.8s ease 1.1s, border-color 0.3s, color 0.3s;
+}
+#try-again.show { opacity:1; }
+#try-again:hover { border-color:rgba(255,255,255,0.6); color:rgba(255,255,255,0.88); }
+
+#sw-label {
+  position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+  font-size:10px; letter-spacing:0.16em; color:rgba(255,255,255,0.1);
+  white-space:nowrap; z-index:10;
+  opacity:0; transition:opacity 0.8s ease 1.4s;
+}
+#sw-label.show { opacity:1; }
+
+/* Fade-in overlay from black */
+#fade-in {
+  position:fixed; inset:0; background:#000; z-index:50;
+  opacity:1; transition:opacity 1.2s ease;
+  pointer-events:none;
+}
+#fade-in.gone { opacity:0; }
+</style>
+</head>
+<body>
+<div id="fade-in"></div>
+<canvas id="c"></canvas>
+
+<div id="planet-container">
+  <svg id="planet-svg" width="200" height="200" viewBox="0 0 200 200"></svg>
+</div>
+
+<div id="text-panel">
+  <h1 id="planet-name"></h1>
+  <p id="planet-type"></p>
+  <div id="divider"></div>
+  <p id="science-text"></p>
+  <p id="narration-text"></p>
+  <button id="try-again" onclick="tryAgain()">Try Again</button>
+</div>
+
+<p id="sw-label">The physics was real the whole time.</p>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ---- Read choices ----
+let trackIdx=1, diskZone='inside';
+try{
+  const td=JSON.parse(sessionStorage.getItem('starTrack'));
+  if(td) trackIdx=td.trackIdx;
+  diskZone=sessionStorage.getItem('diskZone')||'inside';
+}catch(e){}
+
+// ---- Determine planet ----
+const outcomes={
+  hoth:{
+    name:'Hoth', type:'Ice Planet',
+    science:'A red dwarf cannot warm a planet enough for liquid water at any orbital distance. The frost line sits at just 0.3 AU, and even inside it temperatures barely rise above freezing. Whatever forms here is frozen solid. A red dwarf will burn for trillions of years and produce nothing a living thing could be made of.',
+    narration:'[Insert atom narration: cold, still, nothing moving. The universe here is very quiet.]',
+    draw:drawHoth, bg:0x000510, atmCol:0xaaccff,
+  },
+  alderaan:{
+    name:'Alderaan', type:'Terrestrial Planet -- Habitable Zone',
+    science:'A sun-like star. A rocky planet inside the frost line. Carbon in the crust from the planetary nebula. Water delivered by late heavy bombardment. The right temperature for liquid oceans. Every condition for life met. You are the most livable planet in the galaxy.',
+    narration:'[Insert atom narration: green, warm, the smell of something alive. This took 13 billion years.]',
+    draw:drawAlderaan, bg:0x000a05, atmCol:0x66aaff,
+  },
+  bespin:{
+    name:'Bespin', type:'Gas Giant',
+    science:'Outside the frost line, ice condensed and gave your core enormous mass. You pulled in hydrogen and helium. You kept pulling. No solid surface ever formed. Just compressed gas deepening toward a metallic hydrogen core. Habitable only in a narrow atmospheric band where pressure and temperature align.',
+    narration:'[Insert atom narration: drifting in clouds, no ground beneath. Everything is atmosphere.]',
+    draw:drawBespin, bg:0x050508, atmCol:0xffcc66,
+  },
+  mustafar:{
+    name:'Mustafar', type:'Volcanic Planet',
+    science:'The supergiant\'s violent death disrupted nearby forming systems. Gravitational interactions with two outer gas giants pulled your orbit into an ellipse. The resulting tidal flexing heats your interior constantly. Lava everywhere. Geologically extreme, geologically explicable.',
+    narration:'[Insert atom narration: burning, never still, no rest. The planet is alive in the worst way.]',
+    draw:drawMustafar, bg:0x080200, atmCol:0xff4400,
+  },
+  noplanet:{
+    name:'No Planet', type:'Post-Supernova Debris Field',
+    science:'A hypermassive star\'s supernova is not an explosion. It is an erasure. The shockwave moved at a significant fraction of the speed of light. No disk survived intact. No planet formed. There is a black hole where the star was. You are not a planet. You are the reason the next generation of stars will have slightly more heavy elements.',
+    narration:'[Insert atom narration: scattered, drifting, waiting for the next cycle to begin.]',
+    draw:drawNoplanet, bg:0x000002, atmCol:0xff6600,
+  },
+};
+
+let key='alderaan';
+if(trackIdx===0) key='hoth';
+else if(trackIdx===1) key=diskZone==='inside'?'alderaan':'bespin';
+else if(trackIdx===2) key=diskZone==='inside'?'mustafar':'bespin';
+else if(trackIdx===3) key='noplanet';
+
+const planet=outcomes[key];
+
+// ---- SVG planet drawings ----
+function drawHoth(svg){
+  svg.innerHTML=`<defs>
+    <radialGradient id="g" cx="38%" cy="33%">
+      <stop offset="0%" stop-color="#eef5ff"/><stop offset="40%" stop-color="#c8dff5"/><stop offset="100%" stop-color="#7aa8cc"/>
+    </radialGradient><clipPath id="cl"><circle cx="100" cy="100" r="82"/></clipPath></defs>
+    <circle cx="100" cy="100" r="87" fill="rgba(150,200,255,0.08)"/>
+    <circle cx="100" cy="100" r="82" fill="url(#g)"/>
+    <g clip-path="url(#cl)">
+      <ellipse cx="72" cy="68" rx="50" ry="16" fill="rgba(255,255,255,0.45)" transform="rotate(-15,72,68)"/>
+      <ellipse cx="128" cy="118" rx="42" ry="13" fill="rgba(255,255,255,0.35)" transform="rotate(10,128,118)"/>
+      <ellipse cx="86" cy="142" rx="55" ry="15" fill="rgba(255,255,255,0.3)" transform="rotate(-5,86,142)"/>
+      <ellipse cx="100" cy="48" rx="65" ry="18" fill="rgba(255,255,255,0.5)"/>
+      <ellipse cx="100" cy="158" rx="60" ry="16" fill="rgba(255,255,255,0.45)"/>
+    </g>
+    <circle cx="100" cy="100" r="82" fill="none" stroke="rgba(200,230,255,0.2)" stroke-width="1"/>`;
+}
+function drawAlderaan(svg){
+  svg.innerHTML=`<defs>
+    <radialGradient id="g" cx="38%" cy="32%">
+      <stop offset="0%" stop-color="#c8e8ff"/><stop offset="25%" stop-color="#5aabee"/><stop offset="60%" stop-color="#2266bb"/><stop offset="100%" stop-color="#0a3366"/>
+    </radialGradient><clipPath id="cl"><circle cx="100" cy="100" r="82"/></clipPath></defs>
+    <circle cx="100" cy="100" r="88" fill="rgba(80,150,255,0.1)"/>
+    <circle cx="100" cy="100" r="82" fill="url(#g)"/>
+    <g clip-path="url(#cl)">
+      <ellipse cx="86" cy="86" rx="26" ry="20" fill="#3d8c45" transform="rotate(-20,86,86)"/>
+      <ellipse cx="122" cy="78" rx="18" ry="14" fill="#4a9950" transform="rotate(10,122,78)"/>
+      <ellipse cx="68" cy="122" rx="20" ry="16" fill="#3d8040" transform="rotate(15,68,122)"/>
+      <ellipse cx="118" cy="128" rx="14" ry="11" fill="#5aaa60" transform="rotate(-10,118,128)"/>
+      <ellipse cx="100" cy="52" rx="62" ry="11" fill="rgba(255,255,255,0.55)" transform="rotate(-5,100,52)"/>
+      <ellipse cx="82" cy="104" rx="37" ry="7" fill="rgba(255,255,255,0.3)" transform="rotate(20,82,104)"/>
+      <ellipse cx="118" cy="148" rx="46" ry="9" fill="rgba(255,255,255,0.4)" transform="rotate(-8,118,148)"/>
+    </g>
+    <circle cx="100" cy="100" r="82" fill="none" stroke="rgba(100,180,255,0.25)" stroke-width="1"/>`;
+}
+function drawBespin(svg){
+  svg.innerHTML=`<defs>
+    <radialGradient id="g" cx="42%" cy="38%">
+      <stop offset="0%" stop-color="#f5e8c8"/><stop offset="20%" stop-color="#e8c87a"/><stop offset="50%" stop-color="#cc9933"/><stop offset="80%" stop-color="#996622"/><stop offset="100%" stop-color="#664411"/>
+    </radialGradient><clipPath id="cl"><circle cx="100" cy="100" r="82"/></clipPath></defs>
+    <circle cx="100" cy="100" r="88" fill="rgba(200,140,40,0.12)"/>
+    <circle cx="100" cy="100" r="82" fill="url(#g)"/>
+    <g clip-path="url(#cl)">
+      <ellipse cx="100" cy="65" rx="78" ry="8" fill="rgba(255,240,180,0.45)" transform="rotate(-3,100,65)"/>
+      <ellipse cx="100" cy="82" rx="75" ry="7" fill="rgba(220,180,100,0.35)" transform="rotate(2,100,82)"/>
+      <ellipse cx="100" cy="98" rx="80" ry="8" fill="rgba(255,220,120,0.4)" transform="rotate(-1,100,98)"/>
+      <ellipse cx="100" cy="114" rx="77" ry="7" fill="rgba(200,150,60,0.35)" transform="rotate(3,100,114)"/>
+      <ellipse cx="100" cy="132" rx="73" ry="8" fill="rgba(180,120,40,0.4)" transform="rotate(-2,100,132)"/>
+      <ellipse cx="100" cy="148" rx="68" ry="7" fill="rgba(150,90,20,0.3)" transform="rotate(1,100,148)"/>
+    </g>
+    <ellipse cx="100" cy="100" rx="108" ry="16" fill="none" stroke="rgba(220,170,80,0.35)" stroke-width="7"/>
+    <ellipse cx="100" cy="100" rx="120" ry="20" fill="none" stroke="rgba(180,130,50,0.2)" stroke-width="5"/>`;
+}
+function drawMustafar(svg){
+  svg.innerHTML=`<defs>
+    <radialGradient id="g" cx="40%" cy="35%">
+      <stop offset="0%" stop-color="#ff8833"/><stop offset="30%" stop-color="#cc3300"/><stop offset="65%" stop-color="#881100"/><stop offset="100%" stop-color="#330500"/>
+    </radialGradient><clipPath id="cl"><circle cx="100" cy="100" r="82"/></clipPath></defs>
+    <circle cx="100" cy="100" r="88" fill="rgba(255,60,0,0.12)"/>
+    <circle cx="100" cy="100" r="82" fill="url(#g)"/>
+    <g clip-path="url(#cl)">
+      <path d="M35,118 Q55,105 72,114 Q90,100 108,110 Q132,96 156,108 L160,148 Q138,136 118,143 Q98,132 80,140 Q58,130 35,142 Z" fill="rgba(20,5,0,0.7)"/>
+      <path d="M28,86 Q50,74 68,83 Q86,70 104,80 Q126,67 148,77 L152,100 Q128,88 108,95 Q88,83 70,90 Q48,78 28,88 Z" fill="rgba(15,3,0,0.65)"/>
+      <ellipse cx="63" cy="132" rx="7" ry="3.5" fill="#ff6600" opacity="0.85"/>
+      <ellipse cx="100" cy="122" rx="11" ry="4.5" fill="#ff8800" opacity="0.75"/>
+      <ellipse cx="136" cy="138" rx="6" ry="3" fill="#ff5500" opacity="0.8"/>
+      <path d="M50,128 Q58,118 68,128 L65,143 Q58,138 52,143 Z" fill="#ff6600" opacity="0.65"/>
+      <path d="M118,118 Q128,107 138,118 L135,135 Q128,130 120,135 Z" fill="#ff7700" opacity="0.6"/>
+    </g>
+    <circle cx="100" cy="100" r="82" fill="none" stroke="rgba(255,80,0,0.3)" stroke-width="1"/>`;
+}
+function drawNoplanet(svg){
+  svg.innerHTML=`<defs>
+    <radialGradient id="bg" cx="50%" cy="50%">
+      <stop offset="0%" stop-color="#000"/><stop offset="35%" stop-color="#000"/><stop offset="55%" stop-color="#111122"/><stop offset="100%" stop-color="#000"/>
+    </radialGradient>
+    <radialGradient id="acc" cx="50%" cy="50%">
+      <stop offset="30%" stop-color="transparent"/><stop offset="38%" stop-color="rgba(255,120,20,0.65)"/><stop offset="48%" stop-color="rgba(255,80,0,0.3)"/><stop offset="65%" stop-color="rgba(100,50,0,0.1)"/><stop offset="100%" stop-color="transparent"/>
+    </radialGradient></defs>
+    <ellipse cx="100" cy="100" rx="92" ry="26" fill="rgba(255,100,20,0.12)"/>
+    <ellipse cx="100" cy="100" rx="102" ry="30" fill="none" stroke="rgba(255,120,30,0.2)" stroke-width="3"/>
+    <circle cx="100" cy="100" r="82" fill="url(#acc)"/>
+    <circle cx="100" cy="100" r="35" fill="url(#bg)"/>
+    <circle cx="100" cy="100" r="32" fill="#000"/>
+    <circle cx="100" cy="100" r="32" fill="none" stroke="rgba(255,120,20,0.5)" stroke-width="1.5"/>
+    <circle cx="100" cy="100" r="36" fill="none" stroke="rgba(255,80,0,0.25)" stroke-width="3"/>`;
+}
+
+// Draw planet
+planet.draw(document.getElementById('planet-svg'));
+
+// Set text
+document.getElementById('planet-name').textContent=planet.name;
+document.getElementById('planet-type').textContent=planet.type;
+document.getElementById('science-text').textContent=planet.science;
+document.getElementById('narration-text').textContent=planet.narration;
+
+// ---- Three.js background ----
+const renderer=new THREE.WebGLRenderer({canvas:document.getElementById('c'),antialias:true});
+renderer.setSize(window.innerWidth,window.innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setClearColor(planet.bg,1);
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(70,window.innerWidth/window.innerHeight,0.1,2000);
+camera.position.set(0,0,90);
+
+const ptV=`attribute float sz;attribute float al;varying float vA;void main(){vA=al;vec4 mv=modelViewMatrix*vec4(position,1.0);gl_PointSize=sz*(260.0/-mv.z);gl_Position=projectionMatrix*mv;}`;
+const ptF=`uniform vec3 col;uniform float gOp;varying float vA;void main(){float d=length(gl_PointCoord-vec2(0.5));if(d>0.5)discard;float s=1.0-smoothstep(0.0,0.5,d);gl_FragColor=vec4(col,s*vA*gOp);}`;
+function mkMat(c,o){return new THREE.ShaderMaterial({uniforms:{col:{value:new THREE.Color(c)},gOp:{value:o}},vertexShader:ptV,fragmentShader:ptF,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending});}
+function mkStars(n,sp,col,op){
+  const geo=new THREE.BufferGeometry(),pos=new Float32Array(n*3),sz=new Float32Array(n),al=new Float32Array(n);
+  for(let i=0;i<n;i++){const th=Math.random()*Math.PI*2,ph=Math.acos(2*Math.random()-1),r=Math.cbrt(Math.random())*sp;pos[i*3]=r*Math.sin(ph)*Math.cos(th);pos[i*3+1]=r*Math.sin(ph)*Math.sin(th);pos[i*3+2]=(Math.random()-0.5)*sp*0.2;sz[i]=0.3+Math.random()*1.5;al[i]=0.15+Math.random()*0.85;}
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));geo.setAttribute('sz',new THREE.BufferAttribute(sz,1));geo.setAttribute('al',new THREE.BufferAttribute(al,1));
+  const mat=mkMat(col,op),pts=new THREE.Points(geo,mat);scene.add(pts);return{pts,mat};
+}
+const{pts:bg}=mkStars(5000,900,0xffffff,0.6);
+const{pts:atm}=mkStars(180,180,planet.atmCol||0xffffff,0.12);
+
+function tryAgain(){
+  sessionStorage.clear();
+  const ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;background:#000;z-index:100;opacity:0;transition:opacity 0.8s';
+  document.body.appendChild(ov);
+  setTimeout(()=>{ov.style.opacity='1';},10);
+  setTimeout(()=>window.location.href='index.html',900);
+}
+
+let time=0;
+function animate(){
+  requestAnimationFrame(animate);
+  time+=0.004;
+  bg.rotation.z=time*0.005;
+  camera.position.x=Math.sin(time*0.15)*3;
+  camera.position.y=Math.cos(time*0.1)*2;
+  camera.lookAt(0,0,0);
+  renderer.render(scene,camera);
+}
+animate();
+
+window.addEventListener('resize',()=>{
+  camera.aspect=window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth,window.innerHeight);
+});
+
+// ---- Cinematic reveal sequence ----
+// 1. Fade in from black
+// 2. Planet appears large (zoomed in)
+// 3. Planet settles to normal size while text reveals below
+// Reveal sequence -- wait for fade-in to complete before showing anything
+const fi=document.getElementById('fade-in');
+fi.classList.add('gone');
+
+// Wait for fade-in overlay to fully disappear (1.2s), then reveal planet
+setTimeout(()=>{
+  const pc=document.getElementById('planet-container');
+  pc.style.opacity='1';
+  pc.style.transition='opacity 0.8s ease';
+
+  // Settle planet down after it appears
+  setTimeout(()=>{
+    pc.classList.add('settled');
+    setTimeout(()=>document.getElementById('planet-name').classList.add('show'),400);
+    setTimeout(()=>document.getElementById('planet-type').classList.add('show'),700);
+    setTimeout(()=>document.getElementById('divider').classList.add('show'),900);
+    setTimeout(()=>document.getElementById('science-text').classList.add('show'),1100);
+    setTimeout(()=>document.getElementById('narration-text').classList.add('show'),1500);
+    setTimeout(()=>document.getElementById('try-again').classList.add('show'),1900);
+    setTimeout(()=>document.getElementById('sw-label').classList.add('show'),2200);
+  },900);
+},1400);
+</script>
+</body>
+</html>

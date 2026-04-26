@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>What Star Wars Planet Are You?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Cinzel:wght@400;500&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background:#000;
+  overflow:hidden;
+  font-family:'Cormorant Garamond', serif;
+  cursor:default;
+}
+
+#c { position:fixed; inset:0; }
+
+/* Main UI layer */
+#ui {
+  position:fixed; inset:0;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  z-index:10; pointer-events:none;
+}
+
+/* Top label */
+#top-label {
+  font-family:'Cinzel', serif;
+  font-size:10px; letter-spacing:0.35em;
+  color:rgba(255,255,255,0.2);
+  text-transform:uppercase;
+  margin-bottom:28px;
+  opacity:0;
+  animation: fadeUp 1.2s ease 0.8s forwards;
+}
+
+/* Main title */
+#title {
+  text-align:center;
+  margin-bottom:16px;
+}
+
+#title-line1 {
+  display:block;
+  font-family:'Cinzel', serif;
+  font-size:clamp(28px, 5vw, 52px);
+  font-weight:400;
+  color:rgba(255,255,255,0.92);
+  letter-spacing:0.06em;
+  line-height:1.1;
+  opacity:0;
+  animation: fadeUp 1.4s ease 1.2s forwards;
+}
+
+#title-line2 {
+  display:block;
+  font-family:'Cormorant Garamond', serif;
+  font-style:italic;
+  font-weight:300;
+  font-size:clamp(32px, 6vw, 64px);
+  color:rgba(255,255,255,0.88);
+  letter-spacing:0.02em;
+  line-height:1.1;
+  opacity:0;
+  animation: fadeUp 1.4s ease 1.5s forwards;
+}
+
+/* Divider */
+#divider {
+  width:1px;
+  height:0;
+  background:rgba(255,255,255,0.15);
+  margin:28px auto;
+  animation: growLine 1s ease 2s forwards;
+}
+
+/* Subtitle */
+#subtitle {
+  font-family:'Cormorant Garamond', serif;
+  font-weight:300;
+  font-size:clamp(13px, 2vw, 17px);
+  color:rgba(255,255,255,0.35);
+  letter-spacing:0.06em;
+  text-align:center;
+  max-width:480px;
+  line-height:1.8;
+  opacity:0;
+  animation: fadeUp 1.2s ease 2.4s forwards;
+}
+
+/* Begin button */
+#begin-wrap {
+  margin-top:52px;
+  pointer-events:all;
+  opacity:0;
+  animation: fadeUp 1s ease 3s forwards;
+}
+
+#begin-btn {
+  background:none;
+  border:0.5px solid rgba(255,255,255,0.28);
+  border-radius:1px;
+  color:rgba(255,255,255,0.55);
+  font-family:'Cinzel', serif;
+  font-size:11px;
+  letter-spacing:0.3em;
+  padding:14px 48px;
+  cursor:pointer;
+  transition:all 0.4s ease;
+  text-transform:uppercase;
+  position:relative;
+  overflow:hidden;
+}
+
+#begin-btn::before {
+  content:'';
+  position:absolute;
+  inset:0;
+  background:rgba(255,255,255,0);
+  transition:background 0.4s ease;
+}
+
+#begin-btn:hover {
+  border-color:rgba(255,255,255,0.7);
+  color:rgba(255,255,255,0.95);
+  letter-spacing:0.38em;
+}
+
+#begin-btn:hover::before {
+  background:rgba(255,255,255,0.04);
+}
+
+#begin-btn:active {
+  transform:scale(0.98);
+}
+
+/* Bottom credit */
+#credit {
+  position:fixed;
+  bottom:28px;
+  left:50%;
+  transform:translateX(-50%);
+  font-family:'Cormorant Garamond', serif;
+  font-size:11px;
+  color:rgba(255,255,255,0.15);
+  letter-spacing:0.12em;
+  white-space:nowrap;
+  opacity:0;
+  animation: fadeUp 1s ease 3.4s forwards;
+  z-index:10;
+}
+
+/* Planet name teasers in corners */
+.corner-planet {
+  position:fixed;
+  font-family:'Cinzel', serif;
+  font-size:9px;
+  letter-spacing:0.2em;
+  color:rgba(255,255,255,0.1);
+  text-transform:uppercase;
+  opacity:0;
+  animation: fadeIn 2s ease 3.8s forwards;
+  z-index:10;
+}
+#cp1 { top:32px; left:36px; }
+#cp2 { top:32px; right:36px; }
+#cp3 { bottom:32px; left:36px; }
+#cp4 { bottom:32px; right:36px; }
+
+/* Transition overlay */
+#transition {
+  position:fixed; inset:0; z-index:30;
+  opacity:0; pointer-events:none;
+  background:#000;
+}
+
+/* Keyframes */
+@keyframes fadeUp {
+  from { opacity:0; transform:translateY(12px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+@keyframes growLine {
+  from { height:0; }
+  to   { height:48px; }
+}
+
+@keyframes fadeIn {
+  from { opacity:0; }
+  to   { opacity:1; }
+}
+
+/* Subtle scan line */
+#scanline {
+  position:fixed; inset:0; z-index:5; pointer-events:none;
+  background:repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.03) 2px,
+    rgba(0,0,0,0.03) 4px
+  );
+}
+</style>
+</head>
+<body>
+
+<canvas id="c"></canvas>
+<div id="scanline"></div>
+
+<div id="ui">
+  <p id="top-label">A Big Bang to Humankind experience</p>
+
+  <div id="title">
+    <span id="title-line1">What Star Wars Planet</span>
+    <span id="title-line2">Are You?</span>
+  </div>
+
+  <div id="divider"></div>
+
+  <p id="subtitle">You are a hydrogen cloud.<br>This is your origin story.</p>
+
+  <div id="begin-wrap">
+    <button id="begin-btn" onclick="beginGame()">Begin</button>
+  </div>
+</div>
+
+<p class="corner-planet" id="cp1">Alderaan</p>
+<p class="corner-planet" id="cp2">Mustafar</p>
+<p class="corner-planet" id="cp3">Hoth</p>
+<p class="corner-planet" id="cp4">Bespin</p>
+
+<p id="credit">Big Bang to Humankind &nbsp;&middot;&nbsp; Tufts University</p>
+
+<div id="transition"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// Clear any saved state from previous runs
+sessionStorage.clear();
+
+// ---- Three.js nebula background ----
+const renderer = new THREE.WebGLRenderer({canvas:document.getElementById('c'), antialias:true});
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setClearColor(0x000005, 1);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(70, window.innerWidth/window.innerHeight, 0.1, 2000);
+camera.position.set(0, 0, 90);
+
+const ptV = `attribute float sz;attribute float al;varying float vA;void main(){vA=al;vec4 mv=modelViewMatrix*vec4(position,1.0);gl_PointSize=sz*(260.0/-mv.z);gl_Position=projectionMatrix*mv;}`;
+const ptF = `uniform vec3 col;uniform float gOp;varying float vA;void main(){float d=length(gl_PointCoord-vec2(0.5));if(d>0.5)discard;float s=1.0-smoothstep(0.0,0.5,d);gl_FragColor=vec4(col,s*vA*gOp);}`;
+
+function mkMat(c,o){return new THREE.ShaderMaterial({uniforms:{col:{value:new THREE.Color(c)},gOp:{value:o}},vertexShader:ptV,fragmentShader:ptF,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending});}
+
+function mkStars(n,sp,sMin,sMax,col,op){
+  const geo=new THREE.BufferGeometry(),pos=new Float32Array(n*3),sz=new Float32Array(n),al=new Float32Array(n);
+  for(let i=0;i<n;i++){
+    const th=Math.random()*Math.PI*2,ph=Math.acos(2*Math.random()-1),r=Math.cbrt(Math.random())*sp;
+    pos[i*3]=r*Math.sin(ph)*Math.cos(th); pos[i*3+1]=r*Math.sin(ph)*Math.sin(th); pos[i*3+2]=(Math.random()-0.5)*sp*0.2;
+    sz[i]=sMin+Math.random()*(sMax-sMin); al[i]=0.15+Math.random()*0.85;
+  }
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  geo.setAttribute('sz',new THREE.BufferAttribute(sz,1));
+  geo.setAttribute('al',new THREE.BufferAttribute(al,1));
+  const mat=mkMat(col,op),pts=new THREE.Points(geo,mat);
+  scene.add(pts); return{pts,mat};
+}
+
+// Background stars
+const bgS = mkStars(6000,900,0.3,1.6,0xffffff,0.7);
+const blS = mkStars(800,800,0.5,2.0,0x99bbff,0.5);
+const wmS = mkStars(400,700,0.4,1.4,0xffddaa,0.4);
+
+// Nebula clouds -- subtle, dark, behind the title
+const N = 12000;
+const nPos = new Float32Array(N*3), nSz = new Float32Array(N), nAl = new Float32Array(N), nCol = new Float32Array(N*3);
+const clouds=[
+  {c:[0.22,0.08,0.55],off:[-15,8,-60]},
+  {c:[0.05,0.12,0.50],off:[20,-5,-70]},
+  {c:[0.40,0.05,0.22],off:[-20,-12,-55]},
+  {c:[0.06,0.18,0.42],off:[8,20,-65]},
+];
+for(let i=0;i<N;i++){
+  const ci=i%clouds.length,cl=clouds[ci],sp=30+Math.random()*20;
+  const th=Math.random()*Math.PI*2,ph=Math.acos(2*Math.random()-1),r=Math.pow(Math.random(),0.45)*sp;
+  nPos[i*3]=cl.off[0]+r*Math.sin(ph)*Math.cos(th);
+  nPos[i*3+1]=cl.off[1]+r*Math.sin(ph)*Math.sin(th);
+  nPos[i*3+2]=cl.off[2]+r*Math.cos(ph)*0.15;
+  nSz[i]=3+Math.random()*10; nAl[i]=0.15+Math.random()*0.6;
+  nCol[i*3]=cl.c[0]; nCol[i*3+1]=cl.c[1]; nCol[i*3+2]=cl.c[2];
+}
+const nGeo=new THREE.BufferGeometry();
+nGeo.setAttribute('position',new THREE.BufferAttribute(nPos,3));
+nGeo.setAttribute('sz',new THREE.BufferAttribute(nSz,1));
+nGeo.setAttribute('al',new THREE.BufferAttribute(nAl,1));
+nGeo.setAttribute('pCol',new THREE.BufferAttribute(nCol,3));
+const nMat=new THREE.ShaderMaterial({
+  uniforms:{gOp:{value:0}},
+  vertexShader:`attribute float sz;attribute float al;attribute vec3 pCol;varying float vA;varying vec3 vCol;void main(){vA=al;vCol=pCol;vec4 mv=modelViewMatrix*vec4(position,1.0);gl_PointSize=sz*(260.0/-mv.z);gl_Position=projectionMatrix*mv;}`,
+  fragmentShader:`uniform float gOp;varying float vA;varying vec3 vCol;void main(){float d=length(gl_PointCoord-vec2(0.5));if(d>0.5)discard;float s=1.0-smoothstep(0.0,0.5,d);gl_FragColor=vec4(vCol,s*vA*gOp*0.28);}`,
+  transparent:true,depthWrite:false,blending:THREE.AdditiveBlending
+});
+scene.add(new THREE.Points(nGeo,nMat));
+
+// ---- Begin game ----
+function beginGame(){
+  const ov=document.getElementById('transition');
+  let op=0;
+  const fi=setInterval(()=>{
+    op=Math.min(1,op+0.04); ov.style.opacity=op;
+    if(op>=1){ clearInterval(fi); window.location.href='level1.html'; }
+  },20);
+}
+
+// Also allow pressing Enter or Space
+window.addEventListener('keydown', e=>{
+  if(e.key==='Enter'||e.key===' ') beginGame();
+});
+
+// ---- Animate ----
+let time=0, fadeIn=0;
+function loop(){
+  requestAnimationFrame(loop);
+  time+=0.004; fadeIn=Math.min(1,fadeIn+0.003);
+  nMat.uniforms.gOp.value=fadeIn;
+  bgS.pts.rotation.z=time*0.006;
+  blS.pts.rotation.z=-time*0.004;
+  wmS.pts.rotation.z=time*0.003;
+  // Very slow camera drift
+  camera.position.x=Math.sin(time*0.18)*4;
+  camera.position.y=Math.cos(time*0.12)*2.5;
+  camera.lookAt(0,0,0);
+  renderer.render(scene,camera);
+}
+loop();
+
+window.addEventListener('resize',()=>{
+  camera.aspect=window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth,window.innerHeight);
+});
+</script>
+</body>
+</html>

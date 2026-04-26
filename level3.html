@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>You Are Made of Stars - Level 3</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#000; overflow:hidden; font-family:'Georgia',serif; cursor:default; }
+#c { position:fixed; inset:0; }
+
+#level-title {
+  position:fixed; top:32px; left:50%; transform:translateX(-50%);
+  text-align:center; z-index:10; opacity:0; transition:opacity 1.4s ease; pointer-events:none;
+}
+#level-title.show { opacity:1; }
+.title-text { font-size:20px; color:rgba(255,255,255,0.5); font-weight:normal; letter-spacing:0.18em; font-family:'Georgia',serif; }
+
+/* Narration -- used in both death and disk phases */
+#narration {
+  position:fixed; bottom:52px; left:50%; transform:translateX(-50%);
+  width:min(660px,88vw);
+  background:rgba(2,2,12,0.82); border:0.5px solid rgba(255,255,255,0.1);
+  border-radius:3px; padding:26px 34px 20px;
+  color:rgba(255,255,255,0.86); font-size:15px; line-height:1.9;
+  letter-spacing:0.015em; backdrop-filter:blur(16px);
+  transition:opacity 0.7s ease; z-index:10;
+}
+#narration.hide { opacity:0; pointer-events:none; }
+#cont {
+  display:block; margin-top:18px; margin-left:auto;
+  background:none; border:0.5px solid rgba(255,255,255,0.2);
+  border-radius:2px; color:rgba(255,255,255,0.42);
+  font-family:'Georgia',serif; font-size:11px; letter-spacing:0.15em;
+  padding:7px 20px; cursor:pointer; transition:all 0.25s;
+}
+#cont:hover { border-color:rgba(255,255,255,0.55); color:rgba(255,255,255,0.85); }
+
+/* Disk / frost line slider UI -- fades in after disk forms */
+#slider-ui {
+  position:fixed; bottom:52px; left:50%; transform:translateX(-50%);
+  width:min(660px,88vw); z-index:10;
+  opacity:0; pointer-events:none; transition:opacity 1.2s ease;
+}
+#slider-ui.show { opacity:1; pointer-events:all; }
+#slider-box {
+  background:rgba(2,2,14,0.85); border:0.5px solid rgba(255,255,255,0.1);
+  border-radius:3px; padding:22px 28px 20px; backdrop-filter:blur(16px);
+}
+#slider-top { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:14px; }
+#au-readout { font-size:28px; color:rgba(255,255,255,0.8); font-family:'Georgia',serif; }
+#au-unit { font-size:11px; color:rgba(255,255,255,0.3); letter-spacing:0.1em; }
+#zone-status { font-size:12px; letter-spacing:0.06em; transition:color 0.3s; }
+#slider-track-wrap { position:relative; margin-bottom:8px; }
+#au-slider {
+  width:100%; -webkit-appearance:none; appearance:none;
+  height:3px; border-radius:2px; outline:none; cursor:pointer;
+}
+#au-slider::-webkit-slider-thumb {
+  -webkit-appearance:none; width:20px; height:20px; border-radius:50%;
+  background:rgba(255,255,255,0.9); cursor:pointer; box-shadow:0 0 12px rgba(255,255,255,0.4);
+}
+#frost-marker {
+  position:absolute; top:-8px; width:2px; height:19px;
+  background:rgba(100,180,255,0.8); border-radius:1px; pointer-events:none; z-index:3;
+}
+#frost-marker-label {
+  position:absolute; top:-22px; font-size:9px;
+  color:rgba(100,180,255,0.7); letter-spacing:0.08em; white-space:nowrap; transform:translateX(-50%);
+}
+#slider-labels { display:flex; justify-content:space-between; font-size:10px; color:rgba(255,255,255,0.2); letter-spacing:0.06em; margin-bottom:14px; }
+#zone-desc { font-size:12px; color:rgba(255,255,255,0.35); line-height:1.7; min-height:36px; border-top:0.5px solid rgba(255,255,255,0.07); padding-top:12px; margin-bottom:14px; }
+#confirm-btn {
+  display:block; margin:0 auto;
+  background:none; border:0.5px solid rgba(255,255,255,0.18);
+  border-radius:2px; color:rgba(255,255,255,0.32);
+  font-family:'Georgia',serif; font-size:11px; letter-spacing:0.15em;
+  padding:9px 28px; cursor:pointer; transition:all 0.25s;
+  opacity:0; pointer-events:none;
+}
+#confirm-btn.show { opacity:1; pointer-events:all; }
+#confirm-btn:hover { border-color:rgba(255,255,255,0.58); color:rgba(255,255,255,0.88); }
+
+#transition { position:fixed; inset:0; z-index:30; opacity:0; pointer-events:none; background:#000; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="level-title"><p class="title-text">Level 3</p></div>
+
+<div id="narration">
+  <span id="ntxt"></span>
+  <button id="cont">continue</button>
+</div>
+
+<div id="slider-ui">
+  <div id="slider-box">
+    <div id="slider-top">
+      <div><span id="au-readout">--</span><span id="au-unit">&nbsp;AU from the star</span></div>
+      <span id="zone-status"></span>
+    </div>
+    <div id="slider-track-wrap">
+      <div id="frost-marker"><span id="frost-marker-label">frost line</span></div>
+      <input type="range" id="au-slider" min="1" max="100" value="10">
+    </div>
+    <div id="slider-labels">
+      <span id="lbl-min"></span><span id="lbl-mid"></span><span id="lbl-max"></span>
+    </div>
+    <p id="zone-desc"></p>
+    <button id="confirm-btn" onclick="confirmChoice()">Lock in this orbit</button>
+  </div>
+</div>
+
+<div id="transition"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ---- Read track ----
+let trackData=null;
+try{trackData=JSON.parse(sessionStorage.getItem('starTrack'));}catch(e){}
+const trackIdx=trackData?trackData.trackIdx:1;
+
+// Track frost line configs
+const fc=[
+  {frostAU:0.3,minAU:0.05,maxAU:2.5, sceneScale:18, starCol:0xdd4422,innerCol:0xff6633,outerCol:0x4466aa},
+  {frostAU:3,  minAU:0.3, maxAU:12,  sceneScale:4.5,starCol:0xffaa44,innerCol:0xff9933,outerCol:0x5588ff},
+  {frostAU:12, minAU:0.5, maxAU:35,  sceneScale:1.6,starCol:0x88aaff,innerCol:0xff7733,outerCol:0x4488ff},
+  {frostAU:25, minAU:1,   maxAU:65,  sceneScale:0.85,starCol:0xffffff,innerCol:0xff8844,outerCol:0x3366ff},
+][trackIdx];
+const frostR=fc.frostAU*fc.sceneScale;
+const maxR=fc.maxAU*fc.sceneScale;
+
+// ---- Three.js ----
+const renderer=new THREE.WebGLRenderer({canvas:document.getElementById('c'),antialias:true});
+renderer.setSize(window.innerWidth,window.innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setClearColor(0x000005,1);
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(65,window.innerWidth/window.innerHeight,0.1,3000);
+camera.position.set(0,0,80); // starts looking straight at the dying star
+
+const ptV=`attribute float sz;attribute float al;varying float vA;void main(){vA=al;vec4 mv=modelViewMatrix*vec4(position,1.0);gl_PointSize=sz*(280.0/-mv.z);gl_Position=projectionMatrix*mv;}`;
+const ptF=`uniform vec3 col;uniform float gOp;varying float vA;void main(){float d=length(gl_PointCoord-vec2(0.5));if(d>0.5)discard;float s=1.0-smoothstep(0.0,0.5,d);gl_FragColor=vec4(col,s*vA*gOp);}`;
+function mkMat(c,o){return new THREE.ShaderMaterial({uniforms:{col:{value:new THREE.Color(c)},gOp:{value:o}},vertexShader:ptV,fragmentShader:ptF,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending});}
+function mkPts(n,sp,sMin,sMax,col,op){
+  const geo=new THREE.BufferGeometry(),pos=new Float32Array(n*3),sz=new Float32Array(n),al=new Float32Array(n);
+  for(let i=0;i<n;i++){const th=Math.random()*Math.PI*2,ph=Math.acos(2*Math.random()-1),r=Math.cbrt(Math.random())*sp;pos[i*3]=r*Math.sin(ph)*Math.cos(th);pos[i*3+1]=r*Math.sin(ph)*Math.sin(th);pos[i*3+2]=(Math.random()-0.5)*sp*0.2;sz[i]=sMin+Math.random()*(sMax-sMin);al[i]=0.2+Math.random()*0.8;}
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));geo.setAttribute('sz',new THREE.BufferAttribute(sz,1));geo.setAttribute('al',new THREE.BufferAttribute(al,1));
+  const mat=mkMat(col,op),pts=new THREE.Points(geo,mat);scene.add(pts);return{pts,mat};
+}
+
+// Background stars
+const{pts:bg}=mkPts(4000,900,0.3,1.4,0xffffff,0.55);
+
+// ---- PHASE 1: Dying star (pre-death appearance from Level 2) ----
+const starConfigs=[
+  [{col:0x441100,n:300,sp:1,sMin:1,sMax:2},{col:0x662200,n:600,sp:2.5,sMin:1,sMax:3},{col:0x883300,n:800,sp:5,sMin:1,sMax:4},{col:0xaa4400,n:600,sp:8,sMin:1,sMax:5}],
+  [{col:0xffffee,n:300,sp:1,sMin:1,sMax:3},{col:0xffcc55,n:600,sp:4,sMin:2,sMax:5},{col:0xff8822,n:2000,sp:12,sMin:3,sMax:8},{col:0xdd3300,n:4000,sp:28,sMin:4,sMax:12},{col:0xaa1100,n:3000,sp:42,sMin:5,sMax:16},{col:0x661100,n:1500,sp:56,sMin:6,sMax:18}],
+  [{col:0xffffff,n:200,sp:1,sMin:1,sMax:3},{col:0xff9933,n:1200,sp:8,sMin:2,sMax:6},{col:0xff5511,n:2500,sp:18,sMin:3,sMax:9},{col:0xdd2200,n:5000,sp:35,sMin:4,sMax:14},{col:0xbb1100,n:4000,sp:52,sMin:5,sMax:18},{col:0x881100,n:2500,sp:68,sMin:6,sMax:20}],
+  [{col:0xffffff,n:600,sp:1.5,sMin:1,sMax:4},{col:0xccddff,n:2000,sp:9,sMin:2,sMax:7},{col:0xaabbff,n:3000,sp:18,sMin:3,sMax:10},{col:0x7799ee,n:4000,sp:32,sMin:4,sMax:13},{col:0x5577dd,n:3500,sp:48,sMin:5,sMax:16},{col:0x3355bb,n:2000,sp:64,sMin:6,sMax:18}],
+][trackIdx];
+
+const starPts=starConfigs.map(l=>{const{pts,mat}=mkPts(l.n,l.sp,l.sMin,l.sMax,l.col,0);mat.uniforms.gOp.value=0.9;return{pts,mat};});
+
+// ---- PHASE 2: Explosion particles ----
+// Thousands of particles starting at center, blasting outward as a sphere
+const expColors=trackIdx===3?[0xffffff,0xbbccff,0x8899ff,0x5566dd]:[0xffffff,0xffcc44,0xff6600,0xcc2200];
+const explodePts=[];
+expColors.forEach((col,ei)=>{
+  const n=5000,geo=new THREE.BufferGeometry();
+  const pos=new Float32Array(n*3),sz=new Float32Array(n),al=new Float32Array(n);
+  for(let i=0;i<n;i++){pos[i*3]=pos[i*3+1]=pos[i*3+2]=0;sz[i]=1+Math.random()*5;al[i]=0.3+Math.random()*0.7;}
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));geo.setAttribute('sz',new THREE.BufferAttribute(sz,1));geo.setAttribute('al',new THREE.BufferAttribute(al,1));
+  const mat=mkMat(col,0),pts=new THREE.Points(geo,mat);scene.add(pts);
+  // True spherical directions -- no compression
+  const dirs=new Float32Array(n*3);
+  for(let i=0;i<n;i++){
+    const th=Math.random()*Math.PI*2,ph=Math.acos(2*Math.random()-1);
+    const speed=0.4+Math.random()*0.6;
+    dirs[i*3]=Math.sin(ph)*Math.cos(th)*speed;
+    dirs[i*3+1]=Math.sin(ph)*Math.sin(th)*speed;
+    dirs[i*3+2]=Math.cos(ph)*speed;
+  }
+  explodePts.push({pts,mat,dirs,geo,posArr:pos});
+});
+
+// ---- PHASE 3: Disk particles ----
+// Pre-built in disk formation -- initially at explosion positions, then settle
+// Each particle has: explosion direction, final disk position
+const DISK_N=22000;
+const diskGeo=new THREE.BufferGeometry();
+const diskPos=new Float32Array(DISK_N*3),diskSz=new Float32Array(DISK_N),diskAl=new Float32Array(DISK_N),diskCol=new Float32Array(DISK_N*3);
+const diskFinal=new Float32Array(DISK_N*3); // where each particle ends up in the disk
+const diskExpDir=new Float32Array(DISK_N*3); // initial explosion direction
+const ci=new THREE.Color(fc.innerCol),co=new THREE.Color(fc.outerCol);
+
+for(let i=0;i<DISK_N;i++){
+  const th=Math.random()*Math.PI*2;
+  const r=maxR*Math.pow(Math.random(),0.45);
+  // Real protoplanetary disks are VERY flat -- height << radius
+  // Thickness = 3% of radius at any point. Looks flat from oblique angle.
+  const thick=r*0.03+0.5;
+  const y=(Math.random()*2-1)*thick;
+  diskFinal[i*3]=Math.cos(th)*r;
+  diskFinal[i*3+1]=y;
+  diskFinal[i*3+2]=Math.sin(th)*r;
+  diskPos[i*3]=diskPos[i*3+1]=diskPos[i*3+2]=0;
+  diskSz[i]=1.5+Math.random()*4*(1-r/maxR);
+  diskAl[i]=(0.5+Math.random()*0.5)*Math.exp(-r/(maxR*0.55));
+  const expSpeed=0.3+Math.random()*0.7;
+  const eph=Math.acos(2*Math.random()-1),eth=Math.random()*Math.PI*2;
+  diskExpDir[i*3]=Math.sin(eph)*Math.cos(eth)*expSpeed;
+  diskExpDir[i*3+1]=Math.sin(eph)*Math.sin(eth)*expSpeed*0.4;
+  diskExpDir[i*3+2]=Math.cos(eph)*expSpeed;
+  const t=Math.max(0,Math.min(1,(r-frostR*0.7)/(frostR*0.8)));
+  const tc=ci.clone().lerp(co,t);
+  const atFrost=Math.max(0,1-Math.abs(r-frostR)/(frostR*0.1));
+  diskCol[i*3]=tc.r*(1-atFrost*0.3)+0.55*atFrost;
+  diskCol[i*3+1]=tc.g*(1-atFrost*0.3)+0.72*atFrost;
+  diskCol[i*3+2]=tc.b*(1-atFrost*0.3)+atFrost;
+}
+diskGeo.setAttribute('position',new THREE.BufferAttribute(diskPos,3));
+diskGeo.setAttribute('sz',new THREE.BufferAttribute(diskSz,1));
+diskGeo.setAttribute('al',new THREE.BufferAttribute(diskAl,1));
+diskGeo.setAttribute('pCol',new THREE.BufferAttribute(diskCol,3));
+const diskMat=new THREE.ShaderMaterial({
+  uniforms:{gOp:{value:0}},
+  vertexShader:`attribute float sz;attribute float al;attribute vec3 pCol;varying float vA;varying vec3 vCol;void main(){vA=al;vCol=pCol;vec4 mv=modelViewMatrix*vec4(position,1.0);gl_PointSize=sz*(300.0/-mv.z);gl_Position=projectionMatrix*mv;}`,
+  fragmentShader:`uniform float gOp;varying float vA;varying vec3 vCol;void main(){float d=length(gl_PointCoord-vec2(0.5));if(d>0.5)discard;float s=1.0-smoothstep(0.0,0.5,d);gl_FragColor=vec4(vCol,s*vA*gOp);}`,
+  transparent:true,depthWrite:false,blending:THREE.AdditiveBlending
+});
+const diskPts=new THREE.Points(diskGeo,diskMat);
+scene.add(diskPts);
+
+// New central star -- bigger, clearly larger than any planet will be
+const{pts:newStar,mat:newStarMat}=mkPts(400,2.2,2,6,fc.starCol,0);
+const{pts:newStarCore,mat:newStarCoreMat}=mkPts(100,0.8,3,8,0xffffff,0);
+
+// ---- Planet: dense point cloud at fixed orbital position ----
+// Surface-biased distribution so it looks filled and solid
+function mkPlanetCloud(col){
+  const N=8000;
+  const geo=new THREE.BufferGeometry();
+  const pos=new Float32Array(N*3),sz=new Float32Array(N),al=new Float32Array(N);
+  for(let i=0;i<N;i++){
+    const th=Math.random()*Math.PI*2, ph=Math.acos(2*Math.random()-1);
+    // 80% on surface shell, 20% interior -- looks dense and solid
+    const r=Math.random()<0.8 ? 0.88+Math.random()*0.12 : Math.random()*0.88;
+    pos[i*3]=r*Math.sin(ph)*Math.cos(th);
+    pos[i*3+1]=r*Math.sin(ph)*Math.sin(th);
+    pos[i*3+2]=r*Math.cos(ph);
+    sz[i]=0.4+Math.random()*0.8; // very small tight particles
+    al[i]=0.8+Math.random()*0.2; // high opacity
+  }
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  geo.setAttribute('sz',new THREE.BufferAttribute(sz,1));
+  geo.setAttribute('al',new THREE.BufferAttribute(al,1));
+  const mat=new THREE.ShaderMaterial({
+    uniforms:{col:{value:new THREE.Color(col)},gOp:{value:0},scl:{value:0}},
+    vertexShader:`attribute float sz;attribute float al;varying float vA;uniform float scl;void main(){vA=al;vec3 p=position*scl;vec4 mv=modelViewMatrix*vec4(p,1.0);gl_PointSize=sz*(280.0/-mv.z);gl_Position=projectionMatrix*mv;}`,
+    fragmentShader:`uniform vec3 col;uniform float gOp;varying float vA;void main(){float d=length(gl_PointCoord-vec2(0.5));if(d>0.5)discard;float s=1.0-smoothstep(0.3,0.5,d);gl_FragColor=vec4(col,s*vA*gOp);}`,
+    transparent:true,depthWrite:false,blending:THREE.AdditiveBlending
+  });
+  const pts=new THREE.Points(geo,mat);
+  return{pts,mat};
+}
+const{pts:planetPts,mat:planetMat}=mkPlanetCloud(0x997755);
+scene.add(planetPts);
+
+// ---- Phase state machine ----
+// Phase 0: reading narration (star visible)
+// Phase 1: star collapses (flickers and shrinks)
+// Phase 2: explosion sphere (particles blast outward)
+// Phase 3: explosion slows, disk particles settle into disk shape
+// Phase 4: disk spinning, camera tilts to overhead view, slider appears
+
+let phase=0;
+let phaseT=0; // 0-1 progress within current phase
+let expProgress=0;
+let settleProgress=0;
+let diskRotAngle=0;
+let camTilt=0; // camera tilt from front-on to top-down
+let starOpacity=0.9;
+let choiceMade=false;
+
+// Orbital marker for slider
+const markerGeo=new THREE.BufferGeometry();
+const mPos=new Float32Array(80*3),mSz=new Float32Array(80),mAl=new Float32Array(80);
+for(let i=0;i<80;i++){const r=Math.random()*1.5,th=Math.random()*Math.PI*2;mPos[i*3]=Math.cos(th)*r;mPos[i*3+1]=(Math.random()-0.5)*0.5;mPos[i*3+2]=Math.sin(th)*r;mSz[i]=3+Math.random()*5;mAl[i]=0.9;}
+markerGeo.setAttribute('position',new THREE.BufferAttribute(mPos,3));markerGeo.setAttribute('sz',new THREE.BufferAttribute(mSz,1));markerGeo.setAttribute('al',new THREE.BufferAttribute(mAl,1));
+const markerMat=mkMat(0xffffff,0);
+const marker=new THREE.Points(markerGeo,markerMat);
+scene.add(marker);
+
+function startDeath(){
+  phase=1;
+  document.getElementById('narration').classList.add('hide');
+  document.getElementById('narration').style.pointerEvents='none';
+}
+
+// ---- Narration ----
+const narsByTrack=[
+  ['Nothing explodes. Nothing scatters. You just slowly get dimmer.','Everything you made stays locked inside. A white dwarf -- same mass as before, but the size of Earth. Cold. Dense. Done.'],
+  ['The core ran out of fuel. The outer layers puffed up into a red giant -- big enough to swallow the inner planets.','Then the outer layers drifted away. Carbon, oxygen, all of it -- scattered into space as a glowing shell.','What\'s left at the center is a white dwarf. But everything it spent its whole life making is now floating free.'],
+  ['Iron built up in the core. Fusion stopped. In less than a second, the core collapsed to something the size of a city.','The shockwave hit the outer layers. Supernova. For a few weeks, this single star outshone the entire galaxy.','Everything the star spent millions of years making -- carbon, oxygen, iron -- scattered across light years in seconds.'],
+  ['The core collapsed. But this time it didn\'t stop at a city-sized neutron star.','It kept collapsing. Past any known density. A black hole formed where the star used to be.','The explosion briefly outshone the entire observable universe. Some material escaped. Let\'s see where it went.'],
+][trackIdx];
+
+const diskNarsByTrack=[
+  ['The material that didn\'t fall into the red dwarf is still here, slowly spreading out.','The frost line sits very close in -- this star is too dim to push it far. Inside or outside it, things are cold. Choose where you land.'],
+  ['That was millions of years ago. The debris from the explosion has been drifting ever since.','A new star formed nearby from that enriched cloud. You are in its disk now. You are the ash of a dead star.','The frost line is at 3 AU. Inside it, only rock and metal can form. Outside it, ice survives and planets grow enormous. Choose where you land.'],
+  ['The supernova scattered everything across light years. A new star formed from the debris. You are in its disk now.','The frost line sits at 12 AU -- pushed out by how luminous this star is. Inside: rocky worlds. Outside: gas giants.','Choose where you land.'],
+  ['The most violent thing a single star can do. Some material escaped and seeded a second-generation star.','You are in its disk. The frost line sits at 25 AU -- this star heated an enormous region.','Whatever forms here will be geologically extreme. That\'s not a warning. That\'s just physics.'],
+][trackIdx];
+
+let li=0;
+let diskNarPhase=false;
+let diskNarIdx=0;
+
+let activeTypeIv=null;
+function typeText(str,el){
+  if(activeTypeIv) clearInterval(activeTypeIv);
+  el.textContent='';
+  let i=0;
+  activeTypeIv=setInterval(()=>{
+    el.textContent+=str[i++];
+    if(i>=str.length){ clearInterval(activeTypeIv); activeTypeIv=null; }
+  },22);
+}
+
+function nextLine(){
+  if(!diskNarPhase){
+    if(li<narsByTrack.length){
+      typeText(narsByTrack[li++],document.getElementById('ntxt'));
+      if(li===narsByTrack.length){
+        document.getElementById('cont').textContent='continue';
+        document.getElementById('cont').onclick=startDeath;
+      }
+    }
+  } else {
+    if(diskNarIdx<diskNarsByTrack.length-1){
+      typeText(diskNarsByTrack[diskNarIdx++],document.getElementById('ntxt'));
+    } else {
+      // Last disk narration line -- show slider
+      document.getElementById('narration').classList.add('hide');
+      document.getElementById('narration').style.pointerEvents='none';
+      setTimeout(()=>showSlider(),600);
+    }
+  }
+}
+document.getElementById('cont').addEventListener('click',nextLine);
+
+function showDiskNarration(){
+  diskNarPhase=true;
+  const nar=document.getElementById('narration');
+  nar.classList.remove('hide');
+  nar.style.pointerEvents='all';
+  nar.style.opacity='1';
+  document.getElementById('cont').textContent='continue';
+  document.getElementById('cont').onclick=nextLine;
+  typeText(diskNarsByTrack[diskNarIdx++],document.getElementById('ntxt'));
+}
+
+// ---- Slider ----
+const frostPct=(fc.frostAU-fc.minAU)/(fc.maxAU-fc.minAU)*100;
+document.getElementById('frost-marker').style.left=`calc(${frostPct}% - 1px)`;
+document.getElementById('lbl-min').textContent=fc.minAU+' AU';
+document.getElementById('lbl-mid').textContent=fc.frostAU+' AU frost line';
+document.getElementById('lbl-max').textContent=fc.maxAU+' AU';
+
+let currentAU=fc.minAU;
+const slider=document.getElementById('au-slider');
+slider.min=Math.round(fc.minAU*10);
+slider.max=Math.round(fc.maxAU*10);
+slider.value=Math.round(fc.minAU*10);
+
+function updateSlider(){
+  currentAU=parseInt(slider.value)/10;
+  document.getElementById('au-readout').textContent=currentAU.toFixed(1);
+  const inside=currentAU<fc.frostAU;
+  const pct=(currentAU-fc.minAU)/(fc.maxAU-fc.minAU)*100;
+  if(inside){
+    slider.style.background=`linear-gradient(90deg,rgba(255,150,60,0.55) 0%,rgba(255,150,60,0.55) ${pct}%,rgba(255,255,255,0.1) ${pct}%,rgba(255,255,255,0.1) 100%)`;
+    document.getElementById('zone-status').textContent='Inside the frost line';
+    document.getElementById('zone-status').style.color='rgba(255,160,60,0.75)';
+  } else {
+    slider.style.background=`linear-gradient(90deg,rgba(255,255,255,0.1) 0%,rgba(255,255,255,0.1) ${frostPct}%,rgba(100,160,255,0.55) ${frostPct}%,rgba(100,160,255,0.55) ${pct}%,rgba(255,255,255,0.1) ${pct}%,rgba(255,255,255,0.1) 100%)`;
+    document.getElementById('zone-status').textContent='Outside the frost line';
+    document.getElementById('zone-status').style.color='rgba(100,160,255,0.75)';
+  }
+  if(trackIdx===0){
+    document.getElementById('zone-desc').textContent=inside?'Even inside the frost line of a red dwarf, temperatures barely support liquid water.':'Beyond the already-frigid frost line. Whatever forms here is frozen solid.';
+  } else if(trackIdx===3){
+    document.getElementById('zone-desc').textContent='The supernova disrupted this disk severely. Whatever forms will be geologically unstable.';
+  } else {
+    document.getElementById('zone-desc').textContent=inside?'Inside the frost line: only rock and metal can condense. Small, dense, terrestrial worlds.':'Outside the frost line: ice condenses, planets grow massive, pull in gas. No solid surface.';
+  }
+  marker.position.x=currentAU*fc.sceneScale;
+  marker.position.z=0;
+  markerMat.uniforms.col.value=new THREE.Color(inside?0xffaa44:0x66aaff);
+  markerMat.uniforms.gOp.value=0.9;
+  document.getElementById('confirm-btn').classList.add('show');
+}
+slider.addEventListener('input',updateSlider);
+updateSlider();
+
+function showSlider(){
+  document.getElementById('slider-ui').classList.add('show');
+  markerMat.uniforms.gOp.value=0.9;
+}
+
+function confirmChoice(){
+  if(choiceMade)return; choiceMade=true;
+  const inside=currentAU<fc.frostAU;
+  sessionStorage.setItem('diskZone',inside?'inside':'outside');
+  sessionStorage.setItem('diskAU',currentAU.toFixed(1));
+  document.getElementById('slider-ui').style.opacity='0';
+  document.getElementById('slider-ui').style.pointerEvents='none';
+  markerMat.uniforms.gOp.value=0;
+  marker.visible=false;
+  // Start planet formation animation after a beat
+  planetAngleAtConfirm=diskPts.rotation.y;
+setTimeout(()=>animatePlanetFormation(inside),500);
+}
+
+function animatePlanetFormation(inside){
+  phase=5;
+  planetInside=inside;
+
+  // Fix colors -- inside frost line = rocky/warm, outside = icy/blue
+  const planetColors={
+    inside_t0: 0xaabbcc, // hoth -- icy even inside (red dwarf too dim)
+    outside_t0:0xaabbcc, // hoth
+    inside_t1: 0x997755, // alderaan -- rocky brown/tan before oceans
+    outside_t1:0xcc9933, // bespin -- gas giant amber
+    inside_t2: 0xdd3300, // mustafar -- volcanic red-orange
+    outside_t2:0xcc9933, // bespin -- amber
+    inside_t3: 0x111122, // no planet
+    outside_t3:0x111122,
+  };
+  const key=(inside?'inside':'outside')+'_t'+trackIdx;
+  planetTargetColor=new THREE.Color(planetColors[key]||0x997755);
+  planetRadius=inside?1.8:2.8; // planet always smaller than star
+  if(trackIdx===3) planetRadius=0;
+
+  planetFormStart=performance.now();
+  planetFormDuration=trackIdx===3?2000:5500;
+}
+
+let planetInside=true;
+let planetTargetColor=new THREE.Color(0x668899);
+let planetRadius=3.5;
+let planetFormStart=0;
+let planetFormDuration=5000;
+let planetProgress=0;
+
+// Orbital position in 3D -- where the planet will form
+let planetCenterX=0, planetCenterZ=0;
+let planetAngleAtConfirm=0;
+
+// ---- Main animation loop ----
+let time=0;
+
+function animate(){
+  requestAnimationFrame(animate);
+  time+=0.005;
+
+  bg.rotation.z=time*0.004;
+
+  if(phase===0){
+    // Star sitting there, narration being read
+    starPts.forEach(({pts,mat},i)=>{
+      mat.uniforms.gOp.value=0.9;
+      pts.rotation.z=time*0.012*(i%2?1:-1)*0.4;
+    });
+    camera.position.x=Math.sin(time*0.2)*2;
+    camera.position.y=Math.cos(time*0.15)*1.5;
+    camera.position.z=80;
+    camera.lookAt(0,0,0);
+  }
+
+  else if(phase===1){
+    // COLLAPSE: star flickers and shrinks over 1.5 seconds
+    phaseT=Math.min(1,phaseT+0.011);
+    const flicker=1-phaseT+Math.sin(time*20)*0.15*(1-phaseT);
+    starPts.forEach(({mat},i)=>{
+      mat.uniforms.gOp.value=Math.max(0,flicker*0.9*(1-phaseT*0.8));
+    });
+    camera.position.z=80;
+    camera.lookAt(0,0,0);
+    if(phaseT>=1){ phase=2; phaseT=0; }
+  }
+
+  else if(phase===2){
+    // EXPLOSION: sphere of particles blasts outward over 2 seconds
+    phaseT=Math.min(1,phaseT+0.008);
+    const ease=phaseT<0.5?2*phaseT*phaseT:-1+(4-2*phaseT)*phaseT;
+    const spread=ease*52;
+
+    // Hide star completely
+    starPts.forEach(({mat})=>mat.uniforms.gOp.value=0);
+
+    // Expand explosion particles
+    explodePts.forEach(({mat,dirs,geo,posArr},ei)=>{
+      for(let i=0;i<posArr.length/3;i++){
+        posArr[i*3]  =dirs[i*3]  *spread;
+        posArr[i*3+1]=dirs[i*3+1]*spread;
+        posArr[i*3+2]=dirs[i*3+2]*spread;
+      }
+      geo.attributes.position.needsUpdate=true;
+      // Fade: bright flash then fade as it expands
+      const fade=phaseT<0.25?phaseT/0.25:Math.max(0,1-(phaseT-0.25)/0.6);
+      mat.uniforms.gOp.value=fade*0.9;
+    });
+
+    // Also start showing disk particles expanding with explosion
+    diskMat.uniforms.gOp.value=Math.max(0,phaseT-0.3)*0.4;
+    for(let i=0;i<DISK_N;i++){
+      const s=ease*40;
+      diskPos[i*3]  =diskExpDir[i*3]  *s;
+      diskPos[i*3+1]=diskExpDir[i*3+1]*s;
+      diskPos[i*3+2]=diskExpDir[i*3+2]*s;
+    }
+    diskGeo.attributes.position.needsUpdate=true;
+
+    camera.position.z=80+phaseT*20; // pull back slightly during explosion
+    camera.position.x=Math.sin(time*0.2)*2;
+    camera.position.y=Math.cos(time*0.15)*1.5;
+    camera.lookAt(0,0,0);
+
+    if(phaseT>=1){ phase=3; phaseT=0; }
+  }
+
+  else if(phase===3){
+    // SETTLING: two-stage animation
+    // Stage A (0-0.4): explosion particles slow and stop -- sphere of debris hanging in space
+    // Stage B (0.4-1.0): Y axis compresses visibly -- sphere FLATTENS into disk, rotation begins
+    phaseT=Math.min(1,phaseT+0.0025); // slower -- 7 seconds total
+
+    const stageA=Math.min(1,phaseT/0.4);
+    const stageB=Math.max(0,(phaseT-0.4)/0.6);
+    const easeB=stageB*stageB*(3-2*stageB);
+
+    // Fade out explosion helpers during stage A
+    explodePts.forEach(({mat})=>mat.uniforms.gOp.value=Math.max(0,(1-stageA)*0.6));
+
+    diskMat.uniforms.gOp.value=0.2+easeB*0.55;
+
+    for(let i=0;i<DISK_N;i++){
+      // Stage A: particles are still at explosion positions, slowly drifting outward
+      const expFade=1-stageA*0.7; // explosion spread fades to 30% by end of stage A
+      const expX=diskExpDir[i*3]  *40*expFade;
+      const expY=diskExpDir[i*3+1]*40*expFade;
+      const expZ=diskExpDir[i*3+2]*40*expFade;
+
+      // Stage B: from spherical cloud to final disk positions
+      // Key: Y collapses FIRST and FAST (angular momentum crushes vertical motion)
+      // X and Z settle more slowly into orbital positions
+      const yEase=Math.min(1,easeB*1.8); // Y collapses faster but not completely flat
+      const xzEase=easeB;
+
+      diskPos[i*3]  =expX+(diskFinal[i*3]  -expX)*xzEase;
+      // Y settles to final position (which has real thickness) not to zero
+      diskPos[i*3+1]=expY+(diskFinal[i*3+1]-expY)*yEase;
+      diskPos[i*3+2]=expZ+(diskFinal[i*3+2]-expZ)*xzEase;
+    }
+    diskGeo.attributes.position.needsUpdate=true;
+
+    // Camera: during stage A stay front-on so player sees the sphere
+    // During stage B tilt overhead to reveal the disk from above
+    const targetTilt=Math.PI*0.36;
+    camTilt=targetTilt*easeB;
+    const camDist=105;
+    camera.position.y=camDist*Math.sin(camTilt)+2;
+    camera.position.z=camDist*Math.cos(camTilt);
+    camera.position.x=Math.sin(time*0.1)*3;
+    camera.lookAt(0,0,0);
+
+    // Rotation only starts in stage B -- angular momentum conserved as disk flattens
+    diskRotAngle+=0.012*easeB;
+    diskPts.rotation.y=diskRotAngle;
+
+    // New star fades in as disk forms
+    newStarMat.uniforms.gOp.value=easeB*0.85;
+
+    if(phaseT>=1){
+      phase=4; phaseT=0;
+      setTimeout(showDiskNarration,600);
+    }
+  }
+
+  else if(phase===4){
+    explodePts.forEach(({mat})=>mat.uniforms.gOp.value=0);
+    diskMat.uniforms.gOp.value=0.85;
+    diskPts.rotation.y+=0.007;
+    // marker stays fixed in world space -- no rotation
+    newStarMat.uniforms.gOp.value=0.9;
+    newStarCoreMat.uniforms.gOp.value=0.85;
+    camera.position.x=Math.sin(time*0.08)*5;
+    camera.position.y=15+Math.sin(time*0.06)*1.5;
+    camera.position.z=68+Math.cos(time*0.05)*2;
+    camera.lookAt(0,0,0);
+  }
+
+  else if(phase===5){
+    const elapsed=performance.now()-planetFormStart;
+    planetProgress=Math.min(1,elapsed/planetFormDuration);
+    const ease=planetProgress*planetProgress*(3-2*planetProgress);
+
+    if(trackIdx===3){
+      diskMat.uniforms.gOp.value=Math.max(0,0.75-ease*0.75);
+      planetMat.uniforms.gOp.value=0;
+      if(planetProgress>=1) setTimeout(()=>zoomAndGo(),500);
+    } else {
+      diskPts.rotation.y+=0.007;
+      newStarMat.uniforms.gOp.value=0.9;
+      newStarCoreMat.uniforms.gOp.value=0.85;
+
+      // Planet sits at fixed orbital position on x axis
+      const orbitR=currentAU*fc.sceneScale;
+      const px=orbitR, pz=0;
+
+      // Pull disk particles toward planet -- tight zone, clear area around it
+      const clearR=planetRadius*1.0;
+      const streamR=orbitR*0.28;
+      for(let i=0;i<DISK_N;i++){
+        const fx=diskFinal[i*3],fy=diskFinal[i*3+1],fz=diskFinal[i*3+2];
+        const dx=fx-px, dz=fz-pz;
+        const dist=Math.sqrt(dx*dx+dz*dz);
+        if(dist<clearR){
+          const pull=Math.min(1,ease*4);
+          diskPos[i*3]=fx+(px-fx)*pull;
+          diskPos[i*3+1]=fy*(1-pull);
+          diskPos[i*3+2]=fz+(pz-fz)*pull;
+        } else if(dist<streamR){
+          const t=(dist-clearR)/(streamR-clearR);
+          const pull=Math.min(1,ease*2)*(1-t);
+          diskPos[i*3]=fx+(px-fx)*pull;
+          diskPos[i*3+1]=fy*(1-pull*0.6);
+          diskPos[i*3+2]=fz+(pz-fz)*pull;
+        } else {
+          diskPos[i*3]=fx; diskPos[i*3+1]=fy; diskPos[i*3+2]=fz;
+        }
+      }
+      diskGeo.attributes.position.needsUpdate=true;
+      diskMat.uniforms.gOp.value=Math.max(0.2,0.85-ease*0.45);
+
+      // Dense planet particle cloud grows at orbital position
+      planetPts.position.set(px,0,pz);
+      planetMat.uniforms.col.value=planetTargetColor;
+      planetMat.uniforms.scl.value=planetRadius*ease;
+      planetMat.uniforms.gOp.value=Math.min(1,ease*1.8)*0.95;
+
+      // Camera zooms toward planet
+      camera.position.x+=(px*0.4*ease-camera.position.x)*0.012;
+      camera.position.y=15-ease*4;
+      camera.position.z=68-ease*12;
+      camera.lookAt(px*0.3*ease,0,0);
+
+      if(planetProgress>=1) setTimeout(()=>zoomAndGo(),1200);
+    }
+  }
+
+  function zoomAndGo(){
+    // Quick fade to end
+    const ov=document.getElementById('transition');
+    let op=0;
+    const fo=setInterval(()=>{op=Math.min(1,op+0.025);ov.style.opacity=op;if(op>=1){clearInterval(fo);window.location.href='end.html';}},20);
+  }
+
+  renderer.render(scene,camera);
+}
+animate();
+
+window.addEventListener('resize',()=>{
+  camera.aspect=window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth,window.innerHeight);
+});
+
+setTimeout(()=>{
+  document.getElementById('level-title').classList.add('show');
+  setTimeout(nextLine,1400);
+},500);
+</script>
+</body>
+</html>

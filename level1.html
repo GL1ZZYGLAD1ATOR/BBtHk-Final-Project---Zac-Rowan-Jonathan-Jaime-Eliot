@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>You Are Made of Stars - Level 1: The Nebula</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#000; overflow:hidden; font-family:'Georgia',serif; cursor:default; }
+#c3d { position:fixed; inset:0; }
+#c2d { position:fixed; inset:0; pointer-events:none; }
+#level-title {
+  position:fixed; top:32px; left:50%; transform:translateX(-50%);
+  text-align:center; z-index:10; opacity:0; transition:opacity 1.4s ease; pointer-events:none;
+}
+#level-title.show { opacity:1; }
+.eyebrow { font-size:10px; letter-spacing:0.28em; color:rgba(255,255,255,0.28); text-transform:uppercase; font-weight:normal; margin-bottom:7px; }
+.title-text { font-size:26px; color:rgba(255,255,255,0.82); font-weight:normal; letter-spacing:0.05em; }
+#narration {
+  position:fixed; bottom:52px; left:50%; transform:translateX(-50%);
+  width:min(660px,88vw);
+  background:rgba(2,2,12,0.82); border:0.5px solid rgba(255,255,255,0.1);
+  border-radius:3px; padding:26px 34px 20px;
+  color:rgba(255,255,255,0.86); font-size:15px; line-height:1.9;
+  letter-spacing:0.015em; backdrop-filter:blur(16px);
+  transition:opacity 0.7s ease; z-index:10;
+}
+#narration.hide { opacity:0; pointer-events:none; }
+#cont {
+  display:block; margin-top:18px; margin-left:auto;
+  background:none; border:0.5px solid rgba(255,255,255,0.2);
+  border-radius:2px; color:rgba(255,255,255,0.42);
+  font-family:'Georgia',serif; font-size:11px; letter-spacing:0.15em;
+  padding:7px 20px; cursor:pointer; transition:all 0.25s;
+}
+#cont:hover { border-color:rgba(255,255,255,0.55); color:rgba(255,255,255,0.85); }
+#slider-ui {
+  position:fixed; bottom:52px; left:50%; transform:translateX(-50%);
+  width:min(680px,90vw); z-index:10;
+  opacity:0; pointer-events:none; transition:opacity 0.8s ease;
+}
+#slider-ui.show { opacity:1; pointer-events:all; }
+#slider-label {
+  color:rgba(255,255,255,0.3); font-size:11px; letter-spacing:0.18em;
+  text-transform:uppercase; text-align:center; margin-bottom:16px; line-height:1.7;
+}
+#slider-box {
+  background:rgba(2,2,14,0.85); border:0.5px solid rgba(255,255,255,0.1);
+  border-radius:3px; padding:22px 28px 20px; backdrop-filter:blur(16px);
+}
+#track-strip { display:flex; margin-bottom:10px; border-radius:2px; overflow:hidden; height:4px; }
+.track-seg { flex:1; opacity:0.22; transition:opacity 0.25s; }
+.track-seg.active { opacity:1; }
+#ts1{background:#cc6644;}#ts2{background:#ffaa44;}#ts3{background:#88aaff;}#ts4{background:#ffffff;}
+#mass-slider {
+  width:100%; -webkit-appearance:none; appearance:none;
+  height:2px; background:rgba(255,255,255,0.12); border-radius:1px; outline:none; cursor:pointer; margin-bottom:8px;
+}
+#mass-slider::-webkit-slider-thumb {
+  -webkit-appearance:none; width:18px; height:18px; border-radius:50%;
+  background:rgba(255,255,255,0.9); cursor:pointer; box-shadow:0 0 14px rgba(200,160,255,0.7);
+}
+#track-labels { display:flex; justify-content:space-between; margin-bottom:16px; }
+.tlabel { font-size:9px; letter-spacing:0.08em; color:rgba(255,255,255,0.2); text-align:center; width:25%; }
+#track-display {
+  border-top:0.5px solid rgba(255,255,255,0.07); padding-top:16px;
+  display:flex; align-items:flex-start; gap:20px;
+}
+#track-icon { width:34px; height:34px; border-radius:50%; flex-shrink:0; margin-top:3px; transition:background 0.3s, box-shadow 0.3s; }
+#track-info { flex:1; }
+#track-name { font-size:13px; color:rgba(255,255,255,0.75); margin-bottom:3px; }
+#track-mass { font-size:11px; color:rgba(255,255,255,0.35); letter-spacing:0.06em; margin-bottom:6px; }
+#track-fate { font-size:12px; color:rgba(255,255,255,0.38); line-height:1.65; }
+#confirm-btn {
+  display:block; margin:18px auto 0;
+  background:none; border:0.5px solid rgba(255,255,255,0.18);
+  border-radius:2px; color:rgba(255,255,255,0.32);
+  font-family:'Georgia',serif; font-size:11px; letter-spacing:0.15em;
+  padding:9px 28px; cursor:pointer; transition:all 0.25s;
+  opacity:0; pointer-events:none;
+}
+#confirm-btn.show { opacity:1; pointer-events:all; }
+#confirm-btn:hover { border-color:rgba(255,255,255,0.58); color:rgba(255,255,255,0.88); }
+#transition { position:fixed; inset:0; z-index:30; opacity:0; pointer-events:none; }
+</style>
+</head>
+<body>
+<canvas id="c3d"></canvas>
+<canvas id="c2d"></canvas>
+
+<div id="level-title">
+  <p class="title-text">Level 1</p>
+</div>
+
+<div id="narration">
+  <span id="ntxt"></span>
+  <button id="cont">continue</button>
+</div>
+
+<div id="slider-ui">
+  <p id="slider-label">How much mass does gravity pull together?</p>
+  <div id="slider-box">
+    <div id="track-strip">
+      <div class="track-seg" id="ts1"></div>
+      <div class="track-seg" id="ts2"></div>
+      <div class="track-seg" id="ts3"></div>
+      <div class="track-seg" id="ts4"></div>
+    </div>
+    <input type="range" id="mass-slider" min="1" max="100" value="1">
+    <div id="track-labels">
+      <span class="tlabel">Track 1</span>
+      <span class="tlabel">Track 2</span>
+      <span class="tlabel">Track 3</span>
+      <span class="tlabel">Track 4</span>
+    </div>
+    <div id="track-display">
+      <div id="track-icon"></div>
+      <div id="track-info">
+        <p id="track-name">Drag the slider to choose a mass.</p>
+        <p id="track-mass"></p>
+        <p id="track-fate"></p>
+      </div>
+    </div>
+    <button id="confirm-btn" onclick="confirmChoice()">Collapse into this star</button>
+  </div>
+</div>
+
+<div id="transition"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const W = window.innerWidth, H = window.innerHeight;
+const renderer = new THREE.WebGLRenderer({canvas:document.getElementById('c3d'),antialias:true});
+renderer.setSize(W,H); renderer.setPixelRatio(Math.min(devicePixelRatio,2)); renderer.setClearColor(0x00000a,1);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(70,W/H,0.1,2000);
+camera.position.set(0,0,90);
+
+const c2d = document.getElementById('c2d');
+c2d.width=W; c2d.height=H;
+const ctx = c2d.getContext('2d');
+const CX = W*0.5, CY = H*0.5;
+
+// ---- Wobbly ring ----
+// Each ring is defined by a base radius + per-angle noise offsets
+// Generated once per track change so the shape is stable while sliding
+const RING_SEGS = 180;
+let ringOffsets = new Float32Array(RING_SEGS); // per-angle radius perturbation in pixels
+let currentScreenRadius = 0;
+let ringOpacity = 0;
+let ringRGBA = [255,255,255];
+let animTime = 0; // used for very slow ring breathing
+
+function generateRingOffsets(baseRadius) {
+  // Random wobbly offsets -- organic, not perfectly circular
+  // Multiple frequencies of noise layered
+  const offsets = new Float32Array(RING_SEGS);
+  const wobble1 = (Math.random()-0.5) * baseRadius * 0.08;
+  const wobble2 = (Math.random()-0.5) * baseRadius * 0.05;
+  const wobble3 = (Math.random()-0.5) * baseRadius * 0.03;
+  const phase1 = Math.random()*Math.PI*2, phase2 = Math.random()*Math.PI*2, phase3 = Math.random()*Math.PI*2;
+  const freq1 = 2+Math.floor(Math.random()*3); // 2-4 cycles
+  const freq2 = 5+Math.floor(Math.random()*4); // 5-8 cycles
+  const freq3 = 9+Math.floor(Math.random()*5); // 9-13 cycles
+  for(let i=0;i<RING_SEGS;i++){
+    const a = (i/RING_SEGS)*Math.PI*2;
+    offsets[i] = wobble1*Math.sin(freq1*a+phase1)
+               + wobble2*Math.sin(freq2*a+phase2)
+               + wobble3*Math.cos(freq3*a+phase3);
+  }
+  return offsets;
+}
+
+// Per-particle "effective radius" -- how far from center IS this particle
+// in the wobbly ring's coordinate system. We use simple screen distance
+// but check against the ring's actual radius at that angle.
+// This is computed at confirm time to decide which particles collapse.
+let ringOffsetsForCollapse = null;
+
+function drawRing() {
+  ctx.clearRect(0,0,W,H);
+  if(ringOpacity<=0 || currentScreenRadius<=0) return;
+
+  // Very slow breathing
+  const breathe = 1 + Math.sin(animTime*0.4)*0.008;
+
+  ctx.beginPath();
+  for(let i=0;i<=RING_SEGS;i++){
+    const idx = i % RING_SEGS;
+    const a = (idx/RING_SEGS)*Math.PI*2;
+    const r = (currentScreenRadius + ringOffsets[idx]) * breathe;
+    const x = CX + Math.cos(a)*r;
+    const y = CY + Math.sin(a)*r;
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  }
+  ctx.closePath();
+
+  const [r,g,b] = ringRGBA;
+  ctx.strokeStyle = `rgba(${r},${g},${b},${ringOpacity*0.55})`;
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+
+  // Subtle inner glow
+  ctx.beginPath();
+  for(let i=0;i<=RING_SEGS;i++){
+    const idx = i%RING_SEGS;
+    const a=(idx/RING_SEGS)*Math.PI*2;
+    const r2=(currentScreenRadius+ringOffsets[idx])*breathe;
+    const x=CX+Math.cos(a)*r2, y=CY+Math.sin(a)*r2;
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  }
+  ctx.closePath();
+  ctx.fillStyle=`rgba(${r},${g},${b},${ringOpacity*0.03})`;
+  ctx.fill();
+}
+
+// Check if a screen point is inside the wobbly ring
+function isInsideRing(sx, sy) {
+  const dx = sx-CX, dy = sy-CY;
+  const angle = Math.atan2(dy,dx); // -PI to PI
+  const dist = Math.sqrt(dx*dx+dy*dy);
+  // Map angle to ring segment index
+  const idx = Math.floor(((angle+Math.PI)/(Math.PI*2))*RING_SEGS) % RING_SEGS;
+  const rAtAngle = currentScreenRadius + (ringOffsetsForCollapse||ringOffsets)[idx];
+  return dist <= rAtAngle;
+}
+
+// ---- Tracks ----
+// Radii set so Track 4 still sits comfortably inside the nebula
+// Nebula screen spread is roughly 60-65% of the smaller screen dimension
+const S = Math.min(W,H);
+const tracks = [
+  {
+    min:1,max:25,
+    name:'Track 1 -- Red Dwarf',
+    mass:'0.08 - 0.5 solar masses',
+    fate:'Burns for trillions of years. Never gets hot enough for helium fusion. No carbon produced. Dies quietly with no explosion.',
+    screenRadius: S*0.13,
+    coreColor:0xdd5533, iconBg:'#cc4422', glowColor:'rgba(200,80,40,0.8)', flashColor:'#dd5533', ringRGB:[200,100,70]
+  },
+  {
+    min:26,max:55,
+    name:'Track 2 -- Like the Sun',
+    mass:'0.5 - 8 solar masses',
+    fate:'Main sequence for billions of years. Becomes a red giant, fuses helium into carbon via the triple-alpha process. Outer layers form a planetary nebula. Core remains as a white dwarf.',
+    screenRadius: S*0.22,
+    coreColor:0xffaa44, iconBg:'#ffaa44', glowColor:'rgba(255,180,80,0.8)', flashColor:'#ffcc44', ringRGB:[255,180,80]
+  },
+  {
+    min:56,max:80,
+    name:'Track 3 -- Red Supergiant',
+    mass:'8 - 25 solar masses',
+    fate:'Burns fast and hot. Fuses elements up to iron. Collapses and explodes as a supernova, scattering heavy elements across the galaxy. Leaves behind a neutron star the size of a city.',
+    screenRadius: S*0.32,
+    coreColor:0x88aaff, iconBg:'#6688ee', glowColor:'rgba(140,180,255,0.8)', flashColor:'#88aaff', ringRGB:[140,180,255]
+  },
+  {
+    min:81,max:100,
+    name:'Track 4 -- Hypermassive',
+    mass:'25+ solar masses',
+    fate:'The most extreme stars in the universe. Burns through fuel in under a million years. Supernova briefly outshines entire galaxies. Core becomes a black hole.',
+    screenRadius: S*0.42,
+    coreColor:0xffffff, iconBg:'#ccccff', glowColor:'rgba(220,200,255,0.95)', flashColor:'#ffffff', ringRGB:[220,210,255]
+  },
+];
+
+function getTrack(v){return tracks.find(t=>v>=t.min&&v<=t.max)||tracks[0];}
+
+// ---- Shaders ----
+const ptV=`attribute float sz;attribute float al;varying float vA;void main(){vA=al;vec4 mv=modelViewMatrix*vec4(position,1.0);gl_PointSize=sz*(280.0/-mv.z);gl_Position=projectionMatrix*mv;}`;
+const ptF=`uniform vec3 col;uniform float gOp;varying float vA;void main(){float d=length(gl_PointCoord-vec2(0.5));if(d>0.5)discard;float s=1.0-smoothstep(0.0,0.5,d);gl_FragColor=vec4(col,s*vA*gOp);}`;
+function mkMat(c,o){return new THREE.ShaderMaterial({uniforms:{col:{value:new THREE.Color(c)},gOp:{value:o}},vertexShader:ptV,fragmentShader:ptF,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending});}
+function mkStars(n,sp,sMin,sMax,col,op){
+  const geo=new THREE.BufferGeometry(),pos=new Float32Array(n*3),sz=new Float32Array(n),al=new Float32Array(n);
+  for(let i=0;i<n;i++){const th=Math.random()*Math.PI*2,ph=Math.acos(2*Math.random()-1),r=Math.cbrt(Math.random())*sp;pos[i*3]=r*Math.sin(ph)*Math.cos(th);pos[i*3+1]=r*Math.sin(ph)*Math.sin(th);pos[i*3+2]=(Math.random()-0.5)*sp*0.2;sz[i]=sMin+Math.random()*(sMax-sMin);al[i]=0.15+Math.random()*0.85;}
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));geo.setAttribute('sz',new THREE.BufferAttribute(sz,1));geo.setAttribute('al',new THREE.BufferAttribute(al,1));
+  const mat=mkMat(col,op),pts=new THREE.Points(geo,mat);scene.add(pts);return{pts,mat};
+}
+const bgS=mkStars(5000,900,0.3,1.5,0xffffff,0.75);
+const blS=mkStars(600,800,0.5,2.0,0x99bbff,0.6);
+
+// ---- Nebula ----
+const N=24000;
+const homePos=new Float32Array(N*3),currPos=new Float32Array(N*3);
+const homeScreen=new Float32Array(N*2); // projected screen x,y at rest
+const nSz=new Float32Array(N),nAl=new Float32Array(N),nCol=new Float32Array(N*3);
+const collapseRoll=new Float32Array(N);
+
+const clouds=[
+  {c:[0.33,0.13,0.73],off:[-8, 10,-38]},
+  {c:[0.07,0.20,0.67],off:[ 22,-6, -52]},
+  {c:[0.60,0.08,0.27],off:[-26,-16,-33]},
+  {c:[0.08,0.26,0.55],off:[  6, 26,-48]},
+  {c:[0.27,0.07,0.45],off:[ -4,  2,-28]},
+  {c:[0.50,0.05,0.35],off:[ 18, 18,-44]},
+];
+
+for(let i=0;i<N;i++){
+  const ci=i%clouds.length,cl=clouds[ci],sp=25+Math.random()*22;
+  const th=Math.random()*Math.PI*2,ph=Math.acos(2*Math.random()-1),r=Math.pow(Math.random(),0.4)*sp;
+  const x=cl.off[0]+r*Math.sin(ph)*Math.cos(th);
+  const y=cl.off[1]+r*Math.sin(ph)*Math.sin(th);
+  const z=cl.off[2]+r*Math.cos(ph)*0.18;
+  homePos[i*3]=x;homePos[i*3+1]=y;homePos[i*3+2]=z;
+  currPos[i*3]=x;currPos[i*3+1]=y;currPos[i*3+2]=z;
+  nSz[i]=2+Math.random()*8;nAl[i]=0.2+Math.random()*0.8;
+  nCol[i*3]=cl.c[0];nCol[i*3+1]=cl.c[1];nCol[i*3+2]=cl.c[2];
+  collapseRoll[i]=Math.random();
+}
+
+const nGeo=new THREE.BufferGeometry();
+nGeo.setAttribute('position',new THREE.BufferAttribute(currPos,3));
+nGeo.setAttribute('sz',new THREE.BufferAttribute(nSz,1));
+nGeo.setAttribute('al',new THREE.BufferAttribute(nAl,1));
+nGeo.setAttribute('pCol',new THREE.BufferAttribute(nCol,3));
+const nMat=new THREE.ShaderMaterial({
+  uniforms:{gOp:{value:0}},
+  vertexShader:`attribute float sz;attribute float al;attribute vec3 pCol;varying float vA;varying vec3 vCol;void main(){vA=al;vCol=pCol;vec4 mv=modelViewMatrix*vec4(position,1.0);gl_PointSize=sz*(280.0/-mv.z);gl_Position=projectionMatrix*mv;}`,
+  fragmentShader:`uniform float gOp;varying float vA;varying vec3 vCol;void main(){float d=length(gl_PointCoord-vec2(0.5));if(d>0.5)discard;float s=1.0-smoothstep(0.0,0.5,d);gl_FragColor=vec4(vCol,s*vA*gOp*0.38);}`,
+  transparent:true,depthWrite:false,blending:THREE.AdditiveBlending
+});
+scene.add(new THREE.Points(nGeo,nMat));
+
+// Core glow
+const cGeo=new THREE.BufferGeometry();
+const cPA=new Float32Array(1200*3),cSA=new Float32Array(1200),cAA=new Float32Array(1200);
+for(let i=0;i<1200;i++){cPA[i*3]=cPA[i*3+1]=cPA[i*3+2]=0;cSA[i]=1+Math.random()*5;cAA[i]=Math.random();}
+cGeo.setAttribute('position',new THREE.BufferAttribute(cPA,3));
+cGeo.setAttribute('sz',new THREE.BufferAttribute(cSA,1));
+cGeo.setAttribute('al',new THREE.BufferAttribute(cAA,1));
+const cMat=mkMat(0xffffaa,0);
+scene.add(new THREE.Points(cGeo,cMat));
+
+// Project home positions to screen once
+const tempV=new THREE.Vector3();
+let screenReady=false;
+function computeScreenPositions(){
+  camera.updateMatrixWorld();
+  for(let i=0;i<N;i++){
+    tempV.set(homePos[i*3],homePos[i*3+1],homePos[i*3+2]);
+    tempV.project(camera);
+    homeScreen[i*2]  =(tempV.x*0.5+0.5)*W;
+    homeScreen[i*2+1]=(-tempV.y*0.5+0.5)*H;
+  }
+  screenReady=true;
+}
+
+// ---- Slider ----
+let currentTrack=null,choiceMade=false;
+
+document.getElementById('mass-slider').addEventListener('input',function(){
+  if(!screenReady) return;
+  const v=parseInt(this.value);
+  const track=getTrack(v);
+  currentScreenRadius=track.screenRadius;
+  ringOpacity=0;
+  ringRGBA=track.ringRGB;
+  if(track!==currentTrack){
+    currentTrack=track;
+    // Generate new wobbly offsets for this track's radius
+    ringOffsets=generateRingOffsets(track.screenRadius);
+    updateTrackDisplay(track);
+  }
+  document.getElementById('confirm-btn').classList.add('show');
+});
+
+function updateTrackDisplay(t){
+  document.querySelectorAll('.track-seg').forEach(s=>s.classList.remove('active'));
+  document.getElementById('ts'+(tracks.indexOf(t)+1)).classList.add('active');
+  document.getElementById('track-name').textContent=t.name;
+  document.getElementById('track-mass').textContent=t.mass;
+  document.getElementById('track-fate').textContent=t.fate;
+  const icon=document.getElementById('track-icon');
+  icon.style.background=t.iconBg;
+  icon.style.boxShadow='0 0 16px '+t.glowColor;
+  cMat.uniforms.col.value=new THREE.Color(t.coreColor);
+}
+
+function confirmChoice(){
+  if(choiceMade||!currentTrack) return;
+  choiceMade=true;
+  // Freeze the ring offsets for collapse calculation
+  ringOffsetsForCollapse=new Float32Array(ringOffsets);
+  sessionStorage.setItem('starTrack',JSON.stringify({
+    trackIdx:tracks.indexOf(currentTrack),
+    name:currentTrack.name,
+    mass:currentTrack.mass,
+    fate:currentTrack.fate
+  }));
+  document.getElementById('slider-ui').style.opacity='0';
+  document.getElementById('slider-ui').style.pointerEvents='none';
+  // Fade ring
+  const rf=setInterval(()=>{ringOpacity=Math.max(0,ringOpacity-0.025);if(ringOpacity<=0)clearInterval(rf);},30);
+  setTimeout(()=>animateCollapse(currentTrack),500);
+}
+
+function animateCollapse(track){
+  const DURATION=5000;
+  const startTime=performance.now();
+
+  function step(timestamp){
+    const elapsed=timestamp-startTime;
+    const rawProgress=Math.min(1,elapsed/DURATION);
+    const globalEase=rawProgress*rawProgress*rawProgress;
+
+    for(let i=0;i<N;i++){
+      const sx=homeScreen[i*2], sy=homeScreen[i*2+1];
+      const inside=isInsideRing(sx,sy);
+      const shouldCollapse=inside&&collapseRoll[i]<0.90;
+
+      if(shouldCollapse){
+        // Distance from screen center as fraction of ring radius at this angle
+        const dx=sx-CX, dy=sy-CY;
+        const dist=Math.sqrt(dx*dx+dy*dy);
+        const angle=Math.atan2(dy,dx);
+        const idx=Math.floor(((angle+Math.PI)/(Math.PI*2))*RING_SEGS)%RING_SEGS;
+        const rAtAngle=currentScreenRadius+(ringOffsetsForCollapse||ringOffsets)[idx];
+        const distRatio=dist/Math.max(1,rAtAngle);
+
+        // Outer particles start later
+        const delay=distRatio*0.35;
+        const lp=Math.max(0,(rawProgress-delay)/(1-delay+0.001));
+        const le=Math.min(1,lp*lp*lp);
+
+        currPos[i*3]  =homePos[i*3]  *(1-le);
+        currPos[i*3+1]=homePos[i*3+1]*(1-le);
+        currPos[i*3+2]=homePos[i*3+2]*(1-le);
+      }
+    }
+
+    nGeo.attributes.position.needsUpdate=true;
+    cMat.uniforms.gOp.value=globalEase*globalEase*4;
+
+    if(rawProgress<1){
+      requestAnimationFrame(step);
+    } else {
+      setTimeout(()=>flashIgnition(track),900);
+    }
+  }
+  requestAnimationFrame(step);
+}
+
+function flashIgnition(track){
+  const ov=document.getElementById('transition');
+  // Flash bright -- star ignites
+  ov.style.background=`radial-gradient(circle at 50% 50%, #ffffff 0%, ${track.flashColor} 18%, #000 65%)`;
+  let op=0;
+  const fi=setInterval(()=>{
+    op=Math.min(1,op+0.07); ov.style.opacity=op;
+    if(op>=1){
+      clearInterval(fi);
+      // Switch to solid black while still fully opaque, then navigate
+      setTimeout(()=>{
+        ov.style.background='#000';
+        setTimeout(()=>{ window.location.href='level2.html'; }, 300);
+      },500);
+    }
+  },16);
+}
+
+// Narration
+const lines=[
+  "You're a cloud of hydrogen gas. You've been floating here for about a billion years. Nothing has happened. You're starting to wonder if anything ever will.",
+  "Something is pulling. There's more of you on one side than the other. Gravity doesn't need much of an excuse.",
+  "The cloud that falls in becomes the star. The stuff that doesn't? It stays behind. Spinning. Waiting.",
+];
+let li=0;
+let activeTypeIv=null;
+function typeText(str,el){
+  if(activeTypeIv) clearInterval(activeTypeIv);
+  el.textContent='';
+  let i=0;
+  activeTypeIv=setInterval(()=>{
+    el.textContent+=str[i++];
+    if(i>=str.length){ clearInterval(activeTypeIv); activeTypeIv=null; }
+  },22);
+}
+function nextLine(){
+  if(li<lines.length)typeText(lines[li++],document.getElementById('ntxt'));
+  else{document.getElementById('narration').classList.add('hide');setTimeout(()=>document.getElementById('slider-ui').classList.add('show'),600);}
+}
+document.getElementById('cont').addEventListener('click',nextLine);
+
+// Main loop
+let time=0,fadeIn=0,firstRender=true;
+function renderLoop(){
+  requestAnimationFrame(renderLoop);
+  time+=0.004; animTime+=0.016; fadeIn=Math.min(1,fadeIn+0.004);
+  nMat.uniforms.gOp.value=fadeIn;
+  bgS.pts.rotation.z=time*0.006;
+  blS.pts.rotation.z=-time*0.004;
+  camera.position.x=Math.sin(time*0.2)*1.0;
+  camera.position.y=Math.cos(time*0.15)*0.7;
+  camera.lookAt(0,0,0);
+  renderer.render(scene,camera);
+  if(firstRender){firstRender=false;setTimeout(computeScreenPositions,100);}
+  drawRing();
+}
+renderLoop();
+
+window.addEventListener('resize',()=>{
+  camera.aspect=window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth,window.innerHeight);
+  c2d.width=window.innerWidth;c2d.height=window.innerHeight;
+});
+setTimeout(()=>{
+  document.getElementById('level-title').classList.add('show');
+  setTimeout(nextLine,1400);
+},500);
+</script>
+</body>
+</html>

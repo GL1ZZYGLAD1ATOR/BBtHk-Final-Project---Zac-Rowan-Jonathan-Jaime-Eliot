@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>You Are Made of Stars - Level 2: The Star</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#000; overflow:hidden; font-family:'Georgia',serif; cursor:default; }
+#c { position:fixed; inset:0; }
+
+#level-title {
+  position:fixed; top:32px; left:50%; transform:translateX(-50%);
+  text-align:center; z-index:10; opacity:0; transition:opacity 1.4s ease; pointer-events:none;
+}
+#level-title.show { opacity:1; }
+.eyebrow { font-size:10px; letter-spacing:0.28em; color:rgba(255,255,255,0.28); text-transform:uppercase; font-weight:normal; margin-bottom:7px; }
+.title-text { font-size:26px; color:rgba(255,255,255,0.82); font-weight:normal; letter-spacing:0.05em; }
+
+#science-note {
+  position:fixed; top:32px; right:36px; z-index:10;
+  opacity:0; transition:opacity 1s ease; pointer-events:none; text-align:right;
+}
+#science-note.show { opacity:1; }
+#sn1 { font-size:10px; letter-spacing:0.1em; line-height:1.8; }
+#sn2 { font-size:10px; letter-spacing:0.1em; line-height:1.8; }
+
+#narration {
+  position:fixed; bottom:52px; left:50%; transform:translateX(-50%);
+  width:min(660px,88vw);
+  border-radius:3px; padding:26px 34px 20px;
+  font-size:15px; line-height:1.9; letter-spacing:0.015em;
+  backdrop-filter:blur(16px); transition:opacity 0.7s ease; z-index:10;
+  color:rgba(255,255,255,0.86);
+}
+#narration.hide { opacity:0; pointer-events:none !important; }
+#cont {
+  display:block; margin-top:18px; margin-left:auto;
+  background:none; border-radius:2px;
+  font-family:'Georgia',serif; font-size:11px; letter-spacing:0.15em;
+  padding:7px 20px; cursor:pointer; transition:all 0.25s;
+}
+
+/* Temp gauge */
+#temp-ui {
+  position:fixed; bottom:52px; left:50%; transform:translateX(-50%);
+  width:min(660px,88vw); z-index:10;
+  opacity:0; pointer-events:none; transition:opacity 0.8s ease;
+}
+#temp-ui.show { opacity:1; pointer-events:all; z-index:15; }
+#temp-instruction {
+  text-align:center; margin-bottom:18px;
+  font-size:11px; letter-spacing:0.18em; text-transform:uppercase; line-height:1.7;
+}
+#gauge-box {
+  border-radius:3px; padding:24px 32px; backdrop-filter:blur(16px);
+}
+#temp-readout {
+  font-size:36px; letter-spacing:0.04em;
+  text-align:center; margin-bottom:2px; font-weight:normal;
+  font-family:'Georgia',serif; transition:color 0.1s;
+}
+#temp-sublabel {
+  font-size:11px; letter-spacing:0.12em;
+  text-align:center; margin-bottom:18px; text-transform:uppercase;
+}
+#gauge-track {
+  width:100%; height:5px; border-radius:3px; margin-bottom:8px; overflow:visible; position:relative;
+}
+#gauge-fill { height:100%; width:0%; border-radius:3px; transition:width 0.05s linear; }
+/* Target zone: 80-115M K */
+#gauge-target-marker {
+  position:absolute; top:0; left:66.7%; width:24.2%;
+  height:5px; background:rgba(255,255,200,0.18); border-radius:2px;
+  border-left:1px solid rgba(255,255,200,0.5); border-right:1px solid rgba(255,255,200,0.5);
+}
+#gauge-target-label {
+  position:absolute; top:-20px; left:79%;
+  transform:translateX(-50%);
+  font-size:9px; letter-spacing:0.1em; color:rgba(255,255,200,0.5); white-space:nowrap;
+}
+#gauge-labels {
+  display:flex; justify-content:space-between;
+  font-size:10px; letter-spacing:0.06em; margin-bottom:24px;
+}
+#fuse-btn { position:relative; z-index:15;
+  display:block; margin:0 auto;
+  background:none; border-radius:2px;
+  font-family:'Georgia',serif; font-size:13px; letter-spacing:0.14em;
+  padding:13px 40px; cursor:pointer; transition:all 0.2s;
+}
+#fuse-feedback {
+  text-align:center; margin-top:16px; min-height:36px;
+  font-size:12px; letter-spacing:0.04em; line-height:1.7;
+}
+
+#outcome {
+  position:fixed; inset:0; display:none; align-items:center; justify-content:center;
+  z-index:20; opacity:0; pointer-events:none; transition:opacity 1.1s ease;
+}
+#outcome.show { display:flex; opacity:1; pointer-events:all; }
+#obox {
+  width:min(580px,86vw);
+  border-radius:3px; padding:44px 52px; backdrop-filter:blur(22px); text-align:center;
+}
+#olabel { font-size:10px; letter-spacing:0.2em; text-transform:uppercase; margin-bottom:22px; }
+#otext { font-size:15px; line-height:1.9; color:rgba(255,255,255,0.82); margin-bottom:34px; }
+#nextbtn {
+  background:none; border:0.5px solid rgba(255,255,255,0.25); border-radius:2px;
+  color:rgba(255,255,255,0.5); font-family:'Georgia',serif; font-size:11px;
+  letter-spacing:0.16em; padding:10px 30px; cursor:pointer; transition:all 0.28s;
+}
+#nextbtn:hover { border-color:rgba(255,255,255,0.65); color:rgba(255,255,255,0.95); }
+#transition { position:fixed; inset:0; z-index:30; opacity:0; pointer-events:none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="level-title">
+  <p class="title-text">Level 2</p>
+</div>
+
+<div id="science-note">
+  <p id="sn1"></p>
+  <p id="sn2"></p>
+</div>
+
+<div id="narration">
+  <span id="ntxt"></span>
+  <button id="cont">continue</button>
+</div>
+
+<div id="temp-ui">
+  <p id="temp-instruction">The hydrogen is gone. The helium core is compressing.<br>Trigger fusion at exactly 100 million K.</p>
+  <div id="gauge-box">
+    <p id="temp-readout">0</p>
+    <p id="temp-sublabel">million degrees Kelvin</p>
+    <div id="gauge-track">
+      <div id="gauge-fill"></div>
+      <div id="gauge-target-marker"></div>
+      <div id="gauge-target-label">~100M K</div>
+    </div>
+    <div id="gauge-labels">
+      <span>0</span><span>30M</span><span>60M</span><span>90M</span><span>120M K</span>
+    </div>
+    <button id="fuse-btn" onclick="attemptFusion()">Trigger fusion</button>
+    <p id="fuse-feedback"></p>
+  </div>
+</div>
+
+<div id="outcome">
+  <div id="obox">
+    <p id="olabel"></p>
+    <p id="otext"></p>
+    <button id="nextbtn" onclick="goNext()">Level 3: The Death &rarr;</button>
+  </div>
+</div>
+
+<div id="transition"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ---- Read track from Level 1 ----
+let trackData = null;
+try { trackData = JSON.parse(sessionStorage.getItem('starTrack')); } catch(e){}
+const trackIdx = trackData ? trackData.trackIdx : 1; // default Track 2
+
+// Track visual configs -- each track gets a different star appearance
+const trackConfigs = [
+  {
+    // Track 1 -- Red Dwarf: small, dim, deep red
+    name: 'Track 1',
+    bgColor: 0x020000,
+    layers: [
+      {col:0x661100,n:400, sp:1,  sMin:1,sMax:2},
+      {col:0x882200,n:800, sp:2.5,sMin:1,sMax:3},
+      {col:0xaa3300,n:1500,sp:5,  sMin:1,sMax:4},
+      {col:0xcc4400,n:2000,sp:9,  sMin:2,sMax:6},
+      {col:0xdd5500,n:1500,sp:14, sMin:2,sMax:7},
+      {col:0x882200,n:800, sp:20, sMin:3,sMax:8},
+    ],
+    coronaColor:0x661100, coronaInner:18, coronaOuter:35,
+    accentColor:'rgba(180,80,40,',
+    gaugeGradient:['#440800','#882200','#cc4400'],
+    noteColor:'rgba(200,80,40,0.35)',
+    btnBorder:'rgba(180,80,40,0.35)', btnColor:'rgba(200,100,60,0.6)',
+    boxBorder:'rgba(180,80,40,0.15)', boxBg:'rgba(5,1,0,0.88)',
+    narBorder:'rgba(180,80,40,0.1)', narBg:'rgba(4,1,0,0.82)',
+  },
+  {
+    // Track 2 -- Sun-like: medium, warm orange-yellow
+    name: 'Track 2',
+    bgColor: 0x050100,
+    layers: [
+      {col:0xffffff,n:600, sp:1.5,sMin:1,sMax:3},
+      {col:0xffffcc,n:1200,sp:3.5,sMin:1,sMax:4},
+      {col:0xffee88,n:2000,sp:7,  sMin:2,sMax:6},
+      {col:0xff9922,n:3500,sp:13, sMin:2,sMax:7},
+      {col:0xff5500,n:3000,sp:20, sMin:3,sMax:9},
+      {col:0xcc2200,n:2000,sp:28, sMin:4,sMax:11},
+      {col:0x661100,n:1200,sp:36, sMin:5,sMax:13},
+    ],
+    coronaColor:0xff6600, coronaInner:22, coronaOuter:48,
+    accentColor:'rgba(255,180,80,',
+    gaugeGradient:['#ff4400','#ffaa00','#ffff88'],
+    noteColor:'rgba(255,180,80,0.3)',
+    btnBorder:'rgba(255,180,80,0.3)', btnColor:'rgba(255,200,100,0.6)',
+    boxBorder:'rgba(255,180,80,0.15)', boxBg:'rgba(6,2,0,0.92)',
+    narBorder:'rgba(255,180,80,0.12)', narBg:'rgba(4,1,0,0.82)',
+  },
+  {
+    // Track 3 -- Red Supergiant: large, blue-white hot core, red outer
+    name: 'Track 3',
+    bgColor: 0x000205,
+    layers: [
+      {col:0xffffff,n:800, sp:2,  sMin:1,sMax:3},
+      {col:0xeeeeff,n:1500,sp:5,  sMin:1,sMax:4},
+      {col:0xaabbff,n:3000,sp:10, sMin:2,sMax:6},
+      {col:0xff6644,n:4000,sp:18, sMin:3,sMax:9},
+      {col:0xdd3322,n:3500,sp:28, sMin:4,sMax:12},
+      {col:0xaa1100,n:2500,sp:40, sMin:5,sMax:14},
+      {col:0x661100,n:1500,sp:52, sMin:6,sMax:16},
+    ],
+    coronaColor:0xdd4422, coronaInner:30, coronaOuter:65,
+    accentColor:'rgba(140,180,255,',
+    gaugeGradient:['#ff4400','#ff8844','#aabbff'],
+    noteColor:'rgba(140,180,255,0.3)',
+    btnBorder:'rgba(140,180,255,0.3)', btnColor:'rgba(160,200,255,0.6)',
+    boxBorder:'rgba(140,180,255,0.15)', boxBg:'rgba(0,2,6,0.92)',
+    narBorder:'rgba(140,180,255,0.12)', narBg:'rgba(0,1,4,0.82)',
+  },
+  {
+    // Track 4 -- Hypermassive: enormous, blazing blue-white
+    name: 'Track 4',
+    bgColor: 0x000208,
+    layers: [
+      {col:0xffffff,n:1000,sp:2,  sMin:1,sMax:4},
+      {col:0xffffff,n:2000,sp:5,  sMin:1,sMax:5},
+      {col:0xeeeeff,n:3000,sp:10, sMin:2,sMax:7},
+      {col:0xbbccff,n:4000,sp:18, sMin:3,sMax:10},
+      {col:0x8899ff,n:4000,sp:30, sMin:4,sMax:13},
+      {col:0x5566ee,n:3000,sp:44, sMin:5,sMax:15},
+      {col:0x2233bb,n:2000,sp:58, sMin:6,sMax:18},
+    ],
+    coronaColor:0x6677ff, coronaInner:40, coronaOuter:80,
+    accentColor:'rgba(200,210,255,',
+    gaugeGradient:['#8899ff','#bbccff','#ffffff'],
+    noteColor:'rgba(200,210,255,0.3)',
+    btnBorder:'rgba(200,210,255,0.3)', btnColor:'rgba(220,225,255,0.65)',
+    boxBorder:'rgba(200,210,255,0.15)', boxBg:'rgba(0,1,6,0.92)',
+    narBorder:'rgba(200,210,255,0.12)', narBg:'rgba(0,1,5,0.82)',
+  },
+];
+
+const cfg = trackConfigs[trackIdx];
+
+// Apply theme colors to UI elements
+document.querySelector('#narration').style.background = cfg.narBg;
+document.querySelector('#narration').style.border = `0.5px solid ${cfg.narBorder}`;
+document.querySelector('#cont').style.border = `0.5px solid ${cfg.btnBorder}`;
+document.querySelector('#cont').style.color = cfg.btnColor;
+document.querySelector('#sn1').style.color = cfg.noteColor;
+document.querySelector('#sn2').style.color = cfg.noteColor;
+document.querySelector('#temp-instruction').style.color = cfg.accentColor+'0.38)';
+document.querySelector('#gauge-box').style.background = cfg.boxBg;
+document.querySelector('#gauge-box').style.border = `0.5px solid ${cfg.boxBorder}`;
+document.querySelector('#temp-sublabel').style.color = cfg.accentColor+'0.38)';
+document.querySelector('#gauge-labels').style.color = cfg.accentColor+'0.38)';
+document.querySelector('#fuse-btn').style.border = `0.5px solid ${cfg.btnBorder}`;
+document.querySelector('#fuse-btn').style.color = cfg.btnColor;
+document.querySelector('#obox').style.background = cfg.boxBg;
+document.querySelector('#obox').style.border = `0.5px solid ${cfg.boxBorder}`;
+document.querySelector('#olabel').style.color = cfg.accentColor+'0.65)';
+
+// ---- Three.js ----
+const renderer = new THREE.WebGLRenderer({canvas:document.getElementById('c'),antialias:true});
+renderer.setSize(window.innerWidth,window.innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setClearColor(cfg.bgColor,1);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(70,window.innerWidth/window.innerHeight,0.1,2000);
+camera.position.set(0,0,80);
+
+const ptV=`attribute float sz;attribute float al;varying float vA;void main(){vA=al;vec4 mv=modelViewMatrix*vec4(position,1.0);gl_PointSize=sz*(280.0/-mv.z);gl_Position=projectionMatrix*mv;}`;
+const ptF=`uniform vec3 col;uniform float gOp;varying float vA;void main(){float d=length(gl_PointCoord-vec2(0.5));if(d>0.5)discard;float s=1.0-smoothstep(0.0,0.5,d);gl_FragColor=vec4(col,s*vA*gOp);}`;
+function mkMat(c,o){return new THREE.ShaderMaterial({uniforms:{col:{value:new THREE.Color(c)},gOp:{value:o}},vertexShader:ptV,fragmentShader:ptF,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending});}
+function mkPts(n,sp,sMin,sMax,col,op){
+  const geo=new THREE.BufferGeometry(),pos=new Float32Array(n*3),sz=new Float32Array(n),al=new Float32Array(n);
+  for(let i=0;i<n;i++){const th=Math.random()*Math.PI*2,ph=Math.acos(2*Math.random()-1),r=Math.cbrt(Math.random())*sp;pos[i*3]=r*Math.sin(ph)*Math.cos(th);pos[i*3+1]=r*Math.sin(ph)*Math.sin(th);pos[i*3+2]=(Math.random()-0.5)*sp*0.15;sz[i]=sMin+Math.random()*(sMax-sMin);al[i]=0.2+Math.random()*0.8;}
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));geo.setAttribute('sz',new THREE.BufferAttribute(sz,1));geo.setAttribute('al',new THREE.BufferAttribute(al,1));
+  const mat=mkMat(col,op),pts=new THREE.Points(geo,mat);scene.add(pts);return{pts,mat};
+}
+
+// Background stars
+const{pts:bg}=mkPts(3500,800,0.3,1.4,0xffffff,0.6);
+const{pts:bg2}=mkPts(400,700,0.4,1.6,0xffddaa,0.4);
+
+// Star layers -- built from track config
+const starLayers = cfg.layers.map(l=>mkPts(l.n,l.sp,l.sMin,l.sMax,l.col,0));
+
+// Corona
+function mkCorona(n,col,inner,outer){
+  const geo=new THREE.BufferGeometry(),pos=new Float32Array(n*3),sz=new Float32Array(n),al=new Float32Array(n);
+  for(let i=0;i<n;i++){const th=Math.random()*Math.PI*2,r=inner+Math.random()*(outer-inner),jit=(Math.random()-0.5)*8;pos[i*3]=Math.cos(th)*r+jit;pos[i*3+1]=Math.sin(th)*r+jit;pos[i*3+2]=(Math.random()-0.5)*14;sz[i]=1+Math.random()*5;al[i]=Math.random();}
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));geo.setAttribute('sz',new THREE.BufferAttribute(sz,1));geo.setAttribute('al',new THREE.BufferAttribute(al,1));
+  const mat=mkMat(col,0),pts=new THREE.Points(geo,mat);scene.add(pts);return{pts,mat};
+}
+const cor=mkCorona(1500,cfg.coronaColor,cfg.coronaInner,cfg.coronaOuter);
+
+// ---- Temperature gauge ----
+const TARGET_MIN=80, TARGET_MAX=115;
+let tempVal=5, tempDir=1, tempRunning=false, fusionDone=false, attempts=0;
+
+const tempReadout=document.getElementById('temp-readout');
+const gaugeFill=document.getElementById('gauge-fill');
+const fuseFeedback=document.getElementById('fuse-feedback');
+const accentBase=cfg.accentColor;
+
+// Track behavior:
+// Track 1: climbs to max ~70M K, never reaches 100M K, auto-outcome after ~8s
+// Track 2: oscillates 5-115M K, player must click at 100M K window (real challenge)
+// Track 3: climbs steadily, crosses 100M K automatically, triggers fusion -- no click needed
+// Track 4: same as Track 3 but faster, inevitable
+
+const isTrack1 = trackIdx===0;
+const isAutomatic = trackIdx===2||trackIdx===3; // Tracks 3 and 4 auto-trigger
+
+// For automatic tracks, hide the fuse button -- fusion is inevitable
+if(isAutomatic){
+  document.getElementById('fuse-btn').style.display='none';
+  document.getElementById('temp-instruction').textContent='The core temperature is climbing. Helium fusion is inevitable at this mass.';
+}
+
+// Update gauge visuals
+function updateGauge(){
+  const pct=Math.min(100,(tempVal/120)*100);
+  gaugeFill.style.width=pct+'%';
+  gaugeFill.style.background=`linear-gradient(90deg,${cfg.gaugeGradient.join(',')})`;
+  tempReadout.textContent=Math.round(tempVal);
+  if(!isTrack1&&!isAutomatic&&tempVal>=TARGET_MIN&&tempVal<=TARGET_MAX){
+    tempReadout.style.color='rgba(255,255,220,1)';
+    gaugeFill.style.boxShadow=`0 0 10px ${accentBase}0.7)`;
+    document.getElementById('fuse-btn').style.borderColor='rgba(255,255,180,0.7)';
+    document.getElementById('fuse-btn').style.color='rgba(255,255,180,0.95)';
+    document.getElementById('fuse-btn').style.boxShadow='0 0 14px rgba(255,255,150,0.3)';
+  } else {
+    tempReadout.style.color=`${accentBase}0.85)`;
+    gaugeFill.style.boxShadow='none';
+    document.getElementById('fuse-btn').style.borderColor='';
+    document.getElementById('fuse-btn').style.color='';
+    document.getElementById('fuse-btn').style.boxShadow='none';
+  }
+}
+
+// Click handler for Track 2 only
+function attemptFusion(){
+  if(fusionDone||isAutomatic||isTrack1) return;
+
+  const hit=tempVal>=TARGET_MIN&&tempVal<=TARGET_MAX;
+
+  if(hit){
+    fusionDone=true; tempRunning=false;
+    fuseFeedback.textContent='';
+    fuseFeedback.style.color='rgba(255,255,200,0.8)';
+    showOutcome('success');
+    return;
+  }
+
+  // Miss -- flash gauge red and show specific reason
+  attempts++;
+  const gaugeBox=document.getElementById('gauge-box');
+  gaugeBox.style.transition='box-shadow 0.1s';
+  gaugeBox.style.boxShadow='0 0 24px rgba(255,60,60,0.5)';
+  setTimeout(()=>{ gaugeBox.style.boxShadow='none'; },400);
+
+  if(tempVal<TARGET_MIN){
+    fuseFeedback.style.color='rgba(255,120,80,0.85)';
+    fuseFeedback.textContent='Too cold — beryllium decayed before the third helium arrived. Wait for the highlighted zone.';
+  } else {
+    fuseFeedback.style.color='rgba(255,120,80,0.85)';
+    fuseFeedback.textContent='Too hot — core instability. The window is narrow on both sides. Try again.';
+  }
+
+  // After 3 misses -- auto-succeed with a note
+  if(attempts>=3){
+    fusionDone=true; tempRunning=false;
+    setTimeout(()=>{
+      fuseFeedback.textContent='';
+      showOutcome('assisted');
+    },1800);
+  }
+}
+
+const outcomes={
+  success:{
+    label:'Carbon is Born',
+    text:"Three helium atoms just became one carbon atom. That's it. That's the moment. Every carbon atom in every living thing passed through a moment exactly like this one. The energy released pushed the outer layers outward. What happens next depends entirely on how big you are."
+  },
+  toocold:{
+    label:'Too Cold',
+    text:"Beryllium formed but fell apart before the third helium arrived. Less than a trillionth of a second -- that's the window. The core will keep oscillating. Try again when the temperature hits the zone."
+  },
+  toohot:{
+    label:'Too Hot',
+    text:"The reaction window was missed. The triple-alpha process is narrow on both sides. Let the gauge come back around and try again."
+  },
+  track1:{
+    label:'Too Small for Carbon',
+    text:"A red dwarf never gets hot enough for helium fusion. You top out at 70 million degrees -- helium needs 100 million. You'll burn like this for trillions of years, long after every other star in the galaxy has died. But you'll never make carbon. No carbon means no complex chemistry. No complex chemistry means no life."
+  },
+  automatic:{
+    label:'Carbon is Born -- No Choice in the Matter',
+    text:"At this mass, 100 million degrees is just what happens. The helium fused into carbon. Then carbon into oxygen. Then neon. The bigger the star, the more elements it builds -- and the faster it burns through them. You hit iron and stopped. Iron fusion costs more energy than it releases. The factory just shut down. What happens next is fast."
+  },
+  assisted:{
+    label:'Carbon is Born -- Eventually',
+    text:"It took a while, but carbon formed. Real stars do this over millions of years. Every carbon atom in every living thing came from a moment exactly like this. The energy released pushed the outer layers outward. Everything from here depends on this moment."
+  }
+};
+
+function showOutcome(type){
+  document.getElementById('temp-ui').style.opacity='0';
+  document.getElementById('temp-ui').style.pointerEvents='none';
+  const o=outcomes[type];
+  document.getElementById('olabel').textContent=o.label;
+  document.getElementById('otext').textContent=o.text;
+  const out=document.getElementById('outcome');
+  out.style.display='flex';
+  setTimeout(()=>{ out.style.opacity='1'; out.style.pointerEvents='all'; },500);
+}
+
+function goNext(){ const ov=document.getElementById('transition'); ov.style.background='#000'; let op=0; const fo=setInterval(()=>{ op=Math.min(1,op+0.022); ov.style.opacity=op; if(op>=1){ clearInterval(fo); window.location.href='level3.html'; }},20); }
+
+// ---- Narration -- adapts to track ----
+const narrationsByTrack=[
+  // Track 1 -- Red Dwarf
+  [
+    "You collapsed into something small. Dim. A red dwarf -- the most common kind of star in the galaxy, and the stingiest.",
+    "You're fusing hydrogen just fine. But to make carbon, you'd need to reach 100 million degrees. You top out at 70 million. Close, but not close enough.",
+    "Watch what happens.",
+  ],
+  // Track 2 -- Sun-like
+  [
+    "You're a star like our sun. Medium sized. You've been fusing hydrogen for millions of years.",
+    "The hydrogen is running out. The core is heating up. If it gets hot enough -- 100 million degrees -- something remarkable happens.",
+    "Hit the button when the core hits 100 million degrees. Too early, the reaction fails. Too late, same problem. The window is narrow.",
+  ],
+  // Track 3 -- Supergiant
+  [
+    "You're massive. A supergiant. The temperature climbs automatically -- a star this big doesn't need help reaching 100 million degrees.",
+    "Carbon. Then oxygen. Then neon. The bigger the star, the more elements it builds. You're a factory running at full speed.",
+  ],
+  // Track 4 -- Hypermassive
+  [
+    "You're enormous. A hypermassive star. You'll burn through your fuel in about a million years -- a blink, by star standards.",
+    "The temperature is already past 100 million degrees. Carbon, oxygen, silicon -- you're building them all without trying.",
+  ],
+];
+
+const lines=narrationsByTrack[trackIdx];
+let li=0;
+
+let activeTypeIv=null;
+function typeText(str,el){
+  if(activeTypeIv) clearInterval(activeTypeIv);
+  el.textContent='';
+  let i=0;
+  activeTypeIv=setInterval(()=>{
+    el.textContent+=str[i++];
+    if(i>=str.length){ clearInterval(activeTypeIv); activeTypeIv=null; }
+  },22);
+}
+
+function nextLine(){
+  if(li<lines.length){
+    const l=li++;
+    typeText(lines[l],document.getElementById('ntxt'));
+    // Update science note at key beats
+    if(l===0){
+      document.getElementById('sn1').textContent='Core temperature: ~10 million K';
+      document.getElementById('sn2').textContent='Process: hydrogen fusion';
+    }
+    if(l===2){
+      document.getElementById('sn1').textContent='Core temperature: climbing';
+      document.getElementById('sn2').textContent='Hydrogen: depleted';
+    }
+    if(l===3){
+      document.getElementById('sn1').textContent='Target: 100 million K';
+      document.getElementById('sn2').textContent='Triple-alpha: 3 He \u2192 1 C';
+    }
+  } else {
+    const nar=document.getElementById('narration'); nar.classList.add('hide'); nar.style.pointerEvents='none';
+    document.getElementById('science-note').classList.remove('show');
+    setTimeout(()=>{
+      document.getElementById('temp-ui').classList.add('show');
+      tempRunning=true;
+      // Track 1: auto-shows outcome after gauge maxes out and holds
+      if(isTrack1){
+        setTimeout(()=>{tempRunning=false;showOutcome('track1');},9000);
+      }
+    },600);
+  }
+}
+document.getElementById('cont').addEventListener('click',nextLine);
+
+// ---- Animate ----
+let time=0, fadeIn=0;
+function animate(){
+  requestAnimationFrame(animate);
+  time+=0.005; fadeIn=Math.min(1,fadeIn+0.004);
+
+  // Temperature behavior per track
+  if(tempRunning&&!fusionDone){
+    if(isTrack1){
+      // Track 1: climbs slowly to 70M K max, never reaches 100M K
+      if(tempVal<70){ tempVal=Math.min(70,tempVal+0.3); }
+      else { tempVal=65+Math.sin(time*0.8)*5; } // oscillates around 67M K
+      updateGauge();
+    } else if(isAutomatic){
+      // Tracks 3 and 4: climb steadily past 100M K, trigger automatically
+      if(tempVal<115){ tempVal+=0.45+trackIdx*0.15; } // Track 4 climbs faster
+      updateGauge();
+      if(tempVal>=100&&!fusionDone){
+        fusionDone=true; tempRunning=false;
+        setTimeout(()=>showOutcome('automatic'),1200);
+      }
+    } else {
+      // Track 2: oscillates, player must click at window
+      const speed=0.2+Math.sin(time*0.3)*0.1;
+      tempVal+=tempDir*speed;
+      if(tempVal>=118){tempDir=-1;}
+      if(tempVal<=4){tempDir=1;}
+      updateGauge();
+    }
+  }
+
+  bg.rotation.z=time*0.006; bg2.rotation.z=-time*0.004;
+
+  // Fade in star layers
+  starLayers.forEach(({pts,mat},i)=>{
+    const delay=i*0.07;
+    mat.uniforms.gOp.value=Math.min(1,Math.max(0,fadeIn-delay))*0.92;
+    pts.rotation.z=time*0.018*(i%2?1:-1)*0.4;
+  });
+
+  cor.mat.uniforms.gOp.value=fadeIn*0.28;
+  cor.pts.rotation.z=time*0.012;
+
+  camera.position.x=Math.sin(time*0.2)*2;
+  camera.position.y=Math.cos(time*0.15)*1.5;
+  camera.lookAt(0,0,0);
+  renderer.render(scene,camera);
+}
+animate();
+
+window.addEventListener('resize',()=>{
+  camera.aspect=window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth,window.innerHeight);
+});
+
+setTimeout(()=>{
+  document.getElementById('level-title').classList.add('show');
+  document.getElementById('science-note').classList.add('show');
+  setTimeout(nextLine,1400);
+},500);
+</script>
+</body>
+</html>
